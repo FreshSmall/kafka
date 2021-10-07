@@ -26,6 +26,7 @@ public class ProducerRecordTest {
 
     @Test
     public void testEqualsAndHashCode() {
+        // 测试地址
         ProducerRecord<String, Integer> producerRecord = new ProducerRecord<>("test", 1, "key", 1);
         assertEquals(producerRecord, producerRecord);
         assertEquals(producerRecord.hashCode(), producerRecord.hashCode());
