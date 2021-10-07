@@ -706,6 +706,8 @@ project(':core') {
   archivesBaseName = "kafka_${versions.baseScala}"
 
   dependencies {
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.26'
+    compile group: 'org.slf4j', name: 'slf4j-log4j12', version: '1.7.26'
     compile project(':clients')
     compile libs.jacksonDatabind
     compile libs.jacksonModuleScala
