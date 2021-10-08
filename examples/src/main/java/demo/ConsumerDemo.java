@@ -2,12 +2,18 @@ package demo;
 
 import kafka.examples.KafkaProperties;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.common.PartitionInfo;
+import org.apache.kafka.common.TopicPartition;
 
 import java.time.Duration;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 public class ConsumerDemo {
@@ -30,9 +36,9 @@ public class ConsumerDemo {
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         consumer = new KafkaConsumer<>(props);
-
         consumer.subscribe(Collections.singletonList(TOPIC));
-        for (int i = 0; i < 1000; i++) {
+        System.out.println(consumer.listTopics().toString());
+        for (int i = 0; i < 2; i++) {
             ConsumerRecords<Integer, String> records = consumer.poll(Duration.ofSeconds(1));
             for (ConsumerRecord<Integer, String> record : records) {
                 System.out.println(groupId + " received message : from partition " + record.partition() + ", (" + record.key() + ", " + record.value() + ") at offset " + record.offset());
@@ -41,8 +47,7 @@ public class ConsumerDemo {
             if (messageRemaining <= 0) {
                 System.out.println(groupId + " finished reading messages");
             }
-
         }
-
+        System.out.println(consumer.listTopics().toString());
     }
 }

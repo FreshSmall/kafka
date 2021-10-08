@@ -47,12 +47,13 @@ public interface Consumer<K, V> extends Closeable {
     Set<String> subscription();
 
     /**
-     * @see KafkaConsumer#subscribe(Collection)
+     * @see KafkaConsumer#subscribe(Collection) 订阅指定的主题
      */
     void subscribe(Collection<String> topics);
 
     /**
-     * @see KafkaConsumer#subscribe(Collection, ConsumerRebalanceListener)
+     * @see KafkaConsumer#subscribe(Collection, ConsumerRebalanceListener) ConsumerRebalanceListener
+     * 设置再均衡监听器
      */
     void subscribe(Collection<String> topics, ConsumerRebalanceListener callback);
 
@@ -62,13 +63,14 @@ public interface Consumer<K, V> extends Closeable {
     void assign(Collection<TopicPartition> partitions);
 
     /**
-    * @see KafkaConsumer#subscribe(Pattern, ConsumerRebalanceListener)
-    */
+     * @see KafkaConsumer#subscribe(Pattern, ConsumerRebalanceListener)
+     */
     void subscribe(Pattern pattern, ConsumerRebalanceListener callback);
 
     /**
-    * @see KafkaConsumer#subscribe(Pattern)
-    */
+     * @see KafkaConsumer#subscribe(Pattern)
+     * 正则表达式方式订阅
+     */
     void subscribe(Pattern pattern);
 
     /**
@@ -106,6 +108,7 @@ public interface Consumer<K, V> extends Closeable {
      * @see KafkaConsumer#commitSync(Map, Duration)
      */
     void commitSync(final Map<TopicPartition, OffsetAndMetadata> offsets, final Duration timeout);
+
     /**
      * @see KafkaConsumer#commitAsync()
      */
@@ -123,6 +126,7 @@ public interface Consumer<K, V> extends Closeable {
 
     /**
      * @see KafkaConsumer#seek(TopicPartition, long)
+     * 指定消费者起始消费位置
      */
     void seek(TopicPartition partition, long offset);
 
@@ -145,7 +149,7 @@ public interface Consumer<K, V> extends Closeable {
      * @see KafkaConsumer#position(TopicPartition)
      */
     long position(TopicPartition partition);
-    
+
     /**
      * @see KafkaConsumer#position(TopicPartition, Duration)
      */
@@ -171,7 +175,8 @@ public interface Consumer<K, V> extends Closeable {
     /**
      * @see KafkaConsumer#committed(Set, Duration)
      */
-    Map<TopicPartition, OffsetAndMetadata> committed(Set<TopicPartition> partitions, final Duration timeout);
+    Map<TopicPartition, OffsetAndMetadata> committed(Set<TopicPartition> partitions,
+        final Duration timeout);
 
     /**
      * @see KafkaConsumer#metrics()
@@ -216,12 +221,14 @@ public interface Consumer<K, V> extends Closeable {
     /**
      * @see KafkaConsumer#offsetsForTimes(Map)
      */
-    Map<TopicPartition, OffsetAndTimestamp> offsetsForTimes(Map<TopicPartition, Long> timestampsToSearch);
+    Map<TopicPartition, OffsetAndTimestamp> offsetsForTimes(
+        Map<TopicPartition, Long> timestampsToSearch);
 
     /**
      * @see KafkaConsumer#offsetsForTimes(Map, Duration)
      */
-    Map<TopicPartition, OffsetAndTimestamp> offsetsForTimes(Map<TopicPartition, Long> timestampsToSearch, Duration timeout);
+    Map<TopicPartition, OffsetAndTimestamp> offsetsForTimes(
+        Map<TopicPartition, Long> timestampsToSearch, Duration timeout);
 
     /**
      * @see KafkaConsumer#beginningOffsets(Collection)
@@ -231,7 +238,8 @@ public interface Consumer<K, V> extends Closeable {
     /**
      * @see KafkaConsumer#beginningOffsets(Collection, Duration)
      */
-    Map<TopicPartition, Long> beginningOffsets(Collection<TopicPartition> partitions, Duration timeout);
+    Map<TopicPartition, Long> beginningOffsets(Collection<TopicPartition> partitions,
+        Duration timeout);
 
     /**
      * @see KafkaConsumer#endOffsets(Collection)
