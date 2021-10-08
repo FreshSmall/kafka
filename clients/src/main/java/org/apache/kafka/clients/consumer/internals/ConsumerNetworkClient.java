@@ -57,8 +57,11 @@ public class ConsumerNetworkClient implements Closeable {
     // the mutable state of this class is protected by the object's monitor (excluding the wakeup
     // flag and the request completion queue below).
     private final Logger log;
+    // NetWorkClient 对象
     private final KafkaClient client;
+    // 缓冲队列
     private final UnsentRequests unsent = new UnsentRequests();
+    // 用于管理kafka 集群元数据
     private final Metadata metadata;
     private final Time time;
     private final long retryBackoffMs;
@@ -238,12 +241,13 @@ public class ConsumerNetworkClient implements Closeable {
 
     /**
      * Poll for any network IO.
-     * @param timer Timer bounding how long this method can block
+     * @param timer Timer bounding how long this method can block 方法阻塞时间
      * @param pollCondition Nullable blocking condition
      * @param disableWakeup If TRUE disable triggering wake-ups
      */
     public void poll(Timer timer, PollCondition pollCondition, boolean disableWakeup) {
         // there may be handlers which need to be invoked if we woke up the previous call to poll
+        // 唤醒之前的poll方法调用，需要执行下面的实现。什么方法（？）
         firePendingCompletedRequests();
 
         lock.lock();
@@ -252,6 +256,7 @@ public class ConsumerNetworkClient implements Closeable {
             handlePendingDisconnects();
 
             // send all the requests we can send now
+            // 发送缓冲队列里面的请求（缓冲队列存放什么东西）
             long pollDelayMs = trySend(timer.currentTimeMs());
 
             // check whether the poll is still needed by the caller. Note that if the expected completion
