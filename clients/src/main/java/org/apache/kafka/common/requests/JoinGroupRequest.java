@@ -36,9 +36,13 @@ public class JoinGroupRequest extends AbstractRequest {
 
     public static final String UNKNOWN_MEMBER_ID = "";
 
+    // Consumer Group Id
     private final String groupId;
+    // 心跳超时时间
     private final int sessionTimeout;
+    // GroupCoordinator 分配给消费者的Id
     private final String memberId;
+    // Consumer Group 实现的协议
     private final String protocolType;
     private final List<ProtocolMetadata> groupProtocols;
 

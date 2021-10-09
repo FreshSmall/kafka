@@ -1,14 +1,16 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership. The ASF licenses this file
- * to You under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
- *
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.kafka.clients.consumer.internals;
 
@@ -49,9 +51,13 @@ public class SubscriptionState {
 
     private enum SubscriptionType {
         NONE, AUTO_TOPICS, AUTO_PATTERN, USER_ASSIGNED
+        // NONE subscriptionType的初始值
+        // AUTO_TOPICS 按照指定的topic名字进行订阅，自动分配分区
+        // AUTO_PATTERN 按照指定的正则表达式匹配Topic 进行订阅，自动分配分区
+        // USER_ASSIGNED 用户手动指定消费者消费的Topic以及分区编号
     }
 
-    /* the type of subscription */
+    /* the type of subscription 订阅类型 */
     private SubscriptionType subscriptionType;
 
     /* the pattern user has requested */
@@ -91,10 +97,12 @@ public class SubscriptionState {
      * @param type The given subscription type
      */
     private void setSubscriptionType(SubscriptionType type) {
-        if (this.subscriptionType == SubscriptionType.NONE)
+        // subscriptionType 为NONE可以指定模式，不为空则抛出异常
+        if (this.subscriptionType == SubscriptionType.NONE) {
             this.subscriptionType = type;
-        else if (this.subscriptionType != type)
+        } else if (this.subscriptionType != type) {
             throw new IllegalStateException(SUBSCRIPTION_EXCEPTION_MESSAGE);
+        }
     }
 
     public SubscriptionState(OffsetResetStrategy defaultResetStrategy) {
@@ -110,9 +118,12 @@ public class SubscriptionState {
     }
 
     public void subscribe(Collection<String> topics, ConsumerRebalanceListener listener) {
-        if (listener == null)
+        // 用户未指定ConsumerRebalanceListener时，默认使用NoOpConsumerRebalanceListener，其中所有方法实现都是空的
+        if (listener == null) {
             throw new IllegalArgumentException("RebalanceListener cannot be null");
+        }
 
+        // 选择AUTO_TOPICS模式
         setSubscriptionType(SubscriptionType.AUTO_TOPICS);
 
         this.listener = listener;
@@ -121,17 +132,22 @@ public class SubscriptionState {
     }
 
     public void changeSubscription(Collection<String> topicsToSubscribe) {
+        // 订阅的Topic有变化
         if (!this.subscription.equals(new HashSet<>(topicsToSubscribe))) {
+            // 清空subscription 集合
             this.subscription.clear();
+            // 添加订阅的Topic
             this.subscription.addAll(topicsToSubscribe);
             this.groupSubscription.addAll(topicsToSubscribe);
+            // 标记需要重新分配分区
             this.needsPartitionAssignment = true;
-
+            // 同步assignment 与 subscription 集合
             // Remove any assigned partitions which are no longer subscribed to
             for (Iterator<TopicPartition> it = assignment.keySet().iterator(); it.hasNext(); ) {
                 TopicPartition tp = it.next();
-                if (!subscription.contains(tp.topic()))
+                if (!subscription.contains(tp.topic())) {
                     it.remove();
+                }
             }
         }
     }
@@ -142,8 +158,9 @@ public class SubscriptionState {
      * @param topics The topics to add to the group subscription
      */
     public void groupSubscribe(Collection<String> topics) {
-        if (this.subscriptionType == SubscriptionType.USER_ASSIGNED)
+        if (this.subscriptionType == SubscriptionType.USER_ASSIGNED) {
             throw new IllegalStateException(SUBSCRIPTION_EXCEPTION_MESSAGE);
+        }
         this.groupSubscription.addAll(topics);
     }
 
@@ -163,9 +180,11 @@ public class SubscriptionState {
         this.userAssignment.clear();
         this.userAssignment.addAll(partitions);
 
-        for (TopicPartition partition : partitions)
-            if (!assignment.containsKey(partition))
+        for (TopicPartition partition : partitions) {
+            if (!assignment.containsKey(partition)) {
                 addAssignedPartition(partition);
+            }
+        }
 
         this.assignment.keySet().retainAll(this.userAssignment);
 
@@ -178,18 +197,23 @@ public class SubscriptionState {
      * note this is different from {@link #assignFromUser(Collection)} which directly set the assignment from user inputs
      */
     public void assignFromSubscribed(Collection<TopicPartition> assignments) {
-        for (TopicPartition tp : assignments)
-            if (!this.subscription.contains(tp.topic()))
-                throw new IllegalArgumentException("Assigned partition " + tp + " for non-subscribed topic.");
+        for (TopicPartition tp : assignments) {
+            if (!this.subscription.contains(tp.topic())) {
+                throw new IllegalArgumentException(
+                    "Assigned partition " + tp + " for non-subscribed topic.");
+            }
+        }
         this.assignment.clear();
-        for (TopicPartition tp: assignments)
+        for (TopicPartition tp : assignments) {
             addAssignedPartition(tp);
+        }
         this.needsPartitionAssignment = false;
     }
 
     public void subscribe(Pattern pattern, ConsumerRebalanceListener listener) {
-        if (listener == null)
+        if (listener == null) {
             throw new IllegalArgumentException("RebalanceListener cannot be null");
+        }
 
         setSubscriptionType(SubscriptionType.AUTO_PATTERN);
 
@@ -247,8 +271,9 @@ public class SubscriptionState {
 
     private TopicPartitionState assignedState(TopicPartition tp) {
         TopicPartitionState state = this.assignment.get(tp);
-        if (state == null)
+        if (state == null) {
             throw new IllegalStateException("No current assignment for partition " + tp);
+        }
         return state;
     }
 
@@ -283,14 +308,16 @@ public class SubscriptionState {
     public Set<TopicPartition> fetchablePartitions() {
         Set<TopicPartition> fetchable = new HashSet<>();
         for (Map.Entry<TopicPartition, TopicPartitionState> entry : assignment.entrySet()) {
-            if (entry.getValue().isFetchable())
+            if (entry.getValue().isFetchable()) {
                 fetchable.add(entry.getKey());
+            }
         }
         return fetchable;
     }
 
     public boolean partitionsAutoAssigned() {
-        return this.subscriptionType == SubscriptionType.AUTO_TOPICS || this.subscriptionType == SubscriptionType.AUTO_PATTERN;
+        return this.subscriptionType == SubscriptionType.AUTO_TOPICS
+            || this.subscriptionType == SubscriptionType.AUTO_PATTERN;
     }
 
     public void position(TopicPartition tp, long offset) {
@@ -305,8 +332,9 @@ public class SubscriptionState {
         Map<TopicPartition, OffsetAndMetadata> allConsumed = new HashMap<>();
         for (Map.Entry<TopicPartition, TopicPartitionState> entry : assignment.entrySet()) {
             TopicPartitionState state = entry.getValue();
-            if (state.hasValidPosition())
+            if (state.hasValidPosition()) {
                 allConsumed.put(entry.getKey(), new OffsetAndMetadata(state.position));
+            }
         }
         return allConsumed;
     }
@@ -332,17 +360,21 @@ public class SubscriptionState {
     }
 
     public boolean hasAllFetchPositions() {
-        for (TopicPartitionState state : assignment.values())
-            if (!state.hasValidPosition())
+        for (TopicPartitionState state : assignment.values()) {
+            if (!state.hasValidPosition()) {
                 return false;
+            }
+        }
         return true;
     }
 
     public Set<TopicPartition> missingFetchPositions() {
         Set<TopicPartition> missing = new HashSet<>();
-        for (Map.Entry<TopicPartition, TopicPartitionState> entry : assignment.entrySet())
-            if (!entry.getValue().hasValidPosition())
+        for (Map.Entry<TopicPartition, TopicPartitionState> entry : assignment.entrySet()) {
+            if (!entry.getValue().hasValidPosition()) {
                 missing.add(entry.getKey());
+            }
+        }
         return missing;
     }
 
@@ -378,10 +410,17 @@ public class SubscriptionState {
         return listener;
     }
 
+
+    // TopicPartitionState 表示的是TopicPartition 的消费状态
     private static class TopicPartitionState {
+
+        // 记录了下次要从Kafka服务端获取的消息的offset
         private Long position; // last consumed position
+        // 记录了最近一次提交的offset
         private OffsetAndMetadata committed;  // last committed position
+        // 记录了当前TopicPartition是否处于暂停状态，与Consumer接口的pause()方法相关
         private boolean paused;  // whether this partition has been paused by the user
+        // 重置position策略
         private OffsetResetStrategy resetStrategy;  // the strategy to use if the offset needs resetting
 
         public TopicPartitionState() {
@@ -410,8 +449,10 @@ public class SubscriptionState {
         }
 
         private void position(long offset) {
-            if (!hasValidPosition())
-                throw new IllegalStateException("Cannot set a new position without a valid current position");
+            if (!hasValidPosition()) {
+                throw new IllegalStateException(
+                    "Cannot set a new position without a valid current position");
+            }
             this.position = offset;
         }
 

@@ -12,6 +12,7 @@
  */
 package org.apache.kafka.clients.consumer.internals;
 
+import jdk.nashorn.internal.ir.Assignment;
 import org.apache.kafka.common.Cluster;
 import org.apache.kafka.common.TopicPartition;
 
@@ -68,6 +69,9 @@ public interface PartitionAssignor {
      */
     String name();
 
+    /**
+     * 封装用户订阅信息和一些影响分配的用户自定义信息
+     */
     class Subscription {
         private final List<String> topics;
         private final ByteBuffer userData;
@@ -97,6 +101,9 @@ public interface PartitionAssignor {
         }
     }
 
+    /**
+     * 保存分区的分配结果
+     */
     class Assignment {
         private final List<TopicPartition> partitions;
         private final ByteBuffer userData;

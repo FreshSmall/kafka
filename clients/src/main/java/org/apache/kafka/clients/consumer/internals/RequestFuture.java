@@ -39,9 +39,13 @@ import java.util.List;
  */
 public class RequestFuture<T> {
 
+    // 表示当前请求是否已经完成，不管正常完成还是出现异常，此字段都会被设置成true
     private boolean isDone = false;
+    // 记录请求正常完成时收到的响应，与exception字段互斥。
     private T value;
+    // 记录导致请求异常完成的异常类，与value字段互斥。此字段非空则表示出现异常，反之则表示正常完成
     private RuntimeException exception;
+    // RequestFutureListener集合，用来监听请求完成的情况。RequestFutureListener 接口有onSuccess()和onFailure()两个方法，对应于请求正常完成和出现异常两种情况
     private List<RequestFutureListener<T>> listeners = new ArrayList<>();
 
 

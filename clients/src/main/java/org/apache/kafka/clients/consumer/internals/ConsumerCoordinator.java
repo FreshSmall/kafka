@@ -63,17 +63,31 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
 
     private static final Logger log = LoggerFactory.getLogger(ConsumerCoordinator.class);
 
+    // PartitionAssignor 列表。在消费者发送的JoinGroupRequest 请求中包含了消费者自身支持的PartitionAssignor信息，
+    // GroupCoordinator 从所有消费者都支持的分配策略中选择一个，通知Leader使用次分配策略进行分区分配。此字段的值通过
+    // partition.assignment.strategy参数配置。
     private final List<PartitionAssignor> assignors;
+    // 记录kafka 集群元数据
     private final Metadata metadata;
+    //
     private final ConsumerCoordinatorMetrics sensors;
+    // SubscriptionState 对象
     private final SubscriptionState subscriptions;
     private final OffsetCommitCallback defaultOffsetCommitCallback;
+    // 是否开启了自动提交offset
     private final boolean autoCommitEnabled;
+    // 自动提交offset的定时任务
     private final AutoCommitTask autoCommitTask;
+    // ConsumerInterceptor 集合
     private final ConsumerInterceptors<?, ?> interceptors;
+    // 标识是否排除内部Topic
     private final boolean excludeInternalTopics;
-
+    // 用来存储metadata的快照信息，主要用来检测Topic是否发生了分区数量的变化。在ConsumerCoordinator的构造方法中，
+    // 会为Metadata添加一个监听器，当Metadata更新时会做下面几件事
     private MetadataSnapshot metadataSnapshot;
+    // 用来存储Metadata的快照信息，不过是用来检测Partition分配的过程中有没有发生分区数量变化。
+    // 具体是在Leader消费者开始分区分配操作前，使用此字段记录Metadata快照;收到SyncGroupResponse后，会比较此字段记录的快照与当前Metadata是否发生变化
+    // 如果发生变化，则要重新进行分区分配。
     private MetadataSnapshot assignmentSnapshot;
 
     /**
@@ -147,6 +161,10 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
             @Override
             public void onMetadataUpdate(Cluster cluster) {
 
+                /**
+                 * AUTO_PATTERN 模式，则使用用户自定义的正则表达式过滤Topic，得到需要订阅的Topic集合后，设置
+                 * 到SubscriptionState的subscription集合和groupSubscription集合中。
+                 */
                 if (subscriptions.hasPatternSubscription()) {
 
                     Set<String> unauthorizedTopics = new HashSet<String>();
@@ -162,18 +180,26 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
                     for (String topic : cluster.topics())
                         if (filterTopic(topic))
                             topicsToSubscribe.add(topic);
-
+                    // 更新 subscription集合、groupSubscription集合、assignment集合
                     subscriptions.changeSubscription(topicsToSubscribe);
+                    // 更新metadata需要记录元数据的Topic集合
                     metadata.setTopics(subscriptions.groupSubscription());
                 } else if (!cluster.unauthorizedTopics().isEmpty()) {
                     throw new TopicAuthorizationException(new HashSet<>(cluster.unauthorizedTopics()));
                 }
 
                 // check if there are any changes to the metadata which should trigger a rebalance
+                /**
+                 * 如果是AUTO_PATTERN或AUTO_TOPICS模式，为当前Metadata做一个快照，这个快照底层是使用HashMap记录每个
+                 * Topic中Partition的个数。将新旧快照进行比较，发生变化的话，则表示消费者订阅的Topic发生分区数量变化，
+                 * 则将SubscriptionState的needsPartitionAssignment字段置为true，需要重新进行分区分配
+                 */
                 if (subscriptions.partitionsAutoAssigned()) {
                     MetadataSnapshot snapshot = new MetadataSnapshot(subscriptions, cluster);
                     if (!snapshot.equals(metadataSnapshot)) {
+                        // metadataSnapshot 记录成变化后的新快照
                         metadataSnapshot = snapshot;
+                        // 设置重新分区的标志位
                         subscriptions.needReassignment();
                     }
                 }
@@ -244,6 +270,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
     protected Map<String, ByteBuffer> performAssignment(String leaderId,
                                                         String assignmentStrategy,
                                                         Map<String, ByteBuffer> allSubscriptions) {
+        // 查找分区分配使用的PartitionAssignor
         PartitionAssignor assignor = lookupAssignor(assignmentStrategy);
         if (assignor == null)
             throw new IllegalStateException("Coordinator selected invalid assignment protocol: " + assignmentStrategy);
@@ -285,9 +312,11 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
     @Override
     protected void onJoinPrepare(int generation, String memberId) {
         // commit offsets prior to rebalance if auto-commit enabled
+        // 进行一次同步提交offset操作
         maybeAutoCommitOffsetsSync();
 
         // execute the user's callback before rebalance
+        // 调用SubscriptionState中设置的ConsumerRebalanceListener
         ConsumerRebalanceListener listener = subscriptions.listener();
         log.info("Revoking previously assigned partitions {} for group {}", subscriptions.assignedPartitions(), groupId);
         try {
@@ -353,6 +382,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
      * Ensure that we have a valid partition assignment from the coordinator.
      */
     public void ensurePartitionAssignment() {
+        // 检测Consumer 的订阅类型是否是AUTO_TOPICS 或AUTO_PATTERN,因为USER_ASSIGNED 不需要进行Rebalance操作
         if (subscriptions.partitionsAutoAssigned()) {
             // Due to a race condition between the initial metadata fetch and the initial rebalance, we need to ensure that
             // the metadata is fresh before joining initially, and then request the metadata update. If metadata update arrives

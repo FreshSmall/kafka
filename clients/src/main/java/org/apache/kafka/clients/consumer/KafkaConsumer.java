@@ -504,17 +504,23 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     private static final AtomicInteger CONSUMER_CLIENT_ID_SEQUENCE = new AtomicInteger(1);
     private static final String JMX_PREFIX = "kafka.consumer";
 
+    // Consumer 唯一标识
     private final String clientId;
+    // 控制着Consumer与服务端GroupCoordinator 之间的通信逻辑
     private final ConsumerCoordinator coordinator;
     private final Deserializer<K> keyDeserializer;
     private final Deserializer<V> valueDeserializer;
+    // 负责从服务端获取消息
     private final Fetcher<K, V> fetcher;
+    // 拦截器集合，poll()方法前对其进行拦截或修改|服务端返回提交offset成功的响应时对其进行拦截或修改
     private final ConsumerInterceptors<K, V> interceptors;
 
     private final Time time;
+    // 负责消费者和Kafka 服务端的网络通信
     private final ConsumerNetworkClient client;
     private final Metrics metrics;
     private final SubscriptionState subscriptions;
+    // 记录了整个Kafka集群的元信息
     private final Metadata metadata;
     private final long retryBackoffMs;
     private final long requestTimeoutMs;
@@ -522,8 +528,10 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
 
     // currentThread holds the threadId of the current thread accessing KafkaConsumer
     // and is used to prevent multi-threaded access
+    // 当前线程
     private final AtomicLong currentThread = new AtomicLong(NO_CURRENT_THREAD);
     // refcount is used to allow reentrant access by the thread who has acquired currentThread
+    // 当前线程的重入次数
     private final AtomicInteger refcount = new AtomicInteger(0);
 
     /**

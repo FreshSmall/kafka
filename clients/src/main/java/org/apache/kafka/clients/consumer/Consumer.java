@@ -42,6 +42,7 @@ public interface Consumer<K, V> extends Closeable {
 
     /**
      * @see KafkaConsumer#subscribe(Collection)
+     * 订阅指定的Topic，并为消费者自动分配分区
      */
     public void subscribe(Collection<String> topics);
 
@@ -52,6 +53,7 @@ public interface Consumer<K, V> extends Closeable {
 
     /**
      * @see KafkaConsumer#assign(Collection)
+     * 手动订阅指定的Topic，并且指定消费的分区
      */
     public void assign(Collection<TopicPartition> partitions);
 
@@ -67,11 +69,13 @@ public interface Consumer<K, V> extends Closeable {
 
     /**
      * @see KafkaConsumer#poll(long)
+     * 负责从服务端获取消息
      */
     public ConsumerRecords<K, V> poll(long timeout);
 
     /**
      * @see KafkaConsumer#commitSync()
+     * 提交消费者起始消费的位置
      */
     public void commitSync();
 
@@ -97,6 +101,7 @@ public interface Consumer<K, V> extends Closeable {
 
     /**
      * @see KafkaConsumer#seek(TopicPartition, long)
+     * 指定消费者起始消费的位置
      */
     public void seek(TopicPartition partition, long offset);
 
@@ -142,11 +147,13 @@ public interface Consumer<K, V> extends Closeable {
 
     /**
      * @see KafkaConsumer#pause(Collection)
+     * 暂停Consumer
      */
     public void pause(Collection<TopicPartition> partitions);
 
     /**
      * @see KafkaConsumer#resume(Collection)
+     * 继续Consumer
      */
     public void resume(Collection<TopicPartition> partitions);
 
