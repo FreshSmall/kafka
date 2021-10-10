@@ -28,7 +28,7 @@ public class ConsumerDemo {
     private static final String SERIALIZER_CLASS = "kafka.serializer.StringEncoder"; // 序列化类
     private static KafkaConsumer<Integer, String> consumer;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
         String groupId = "DemoConsumer";
         Properties props = new Properties();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BROKER_LIST);
@@ -40,17 +40,20 @@ public class ConsumerDemo {
             "org.apache.kafka.common.serialization.IntegerDeserializer");
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
             "org.apache.kafka.common.serialization.StringDeserializer");
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+//        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         consumer = new KafkaConsumer<>(props);
 
         consumer.subscribe(Collections.singletonList(TOPIC));
 
-        ConsumerRecords<Integer, String> records = consumer.poll(1000);
-        for (ConsumerRecord<Integer, String> record : records) {
-            System.out.println(
-                "Received message: (" + record.key() + ", " + record.value() + ") at offset "
-                    + record.offset());
+        for (int i = 0; i < 20; i++) {
+            ConsumerRecords<Integer, String> records = consumer.poll(1000);
+            for (ConsumerRecord<Integer, String> record : records) {
+                System.out.println(
+                        "Received message: (" + record.key() + ", " + record.value() + ") at offset "
+                                + record.offset());
+            }
+            Thread.sleep(500);
         }
     }
 

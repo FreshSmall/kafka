@@ -29,7 +29,7 @@ public class ProducerDemo {
 
     private static final String TOPIC = "kafkaSourceCode"; //kafka创建的topic
     private static final String CONTENT = "This is a single message"; //要发送的内容
-    private static final String BROKER_LIST = "127.0.0.1:9092"; //broker的地址和端口
+    private static final String BROKER_LIST = "localhost:9092"; //broker的地址和端口
     private static final String SERIALIZER_CLASS = "kafka.serializer.StringEncoder"; // 序列化类
 
     private static CyclicBarrier cyclicBarrier;
@@ -61,10 +61,7 @@ public class ProducerDemo {
     public static void main(String[] args) throws BrokenBarrierException, InterruptedException {
         Properties props = new Properties();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BROKER_LIST);
-        props.put(ProducerConfig.ACKS_CONFIG, "all");
-        props.put(ProducerConfig.RETRIES_CONFIG, 0);
-        props.put(ProducerConfig.BATCH_SIZE_CONFIG, 1);
-        props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
+        props.put(ProducerConfig.CLIENT_ID_CONFIG, "DemoProducer");
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, IntegerSerializer.class.getName());
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 //        List<String> interceptors = new ArrayList<>();
