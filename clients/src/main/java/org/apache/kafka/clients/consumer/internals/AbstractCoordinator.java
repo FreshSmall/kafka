@@ -634,6 +634,7 @@ public abstract class AbstractCoordinator implements Closeable {
 
     /**
      * Check if we know who the coordinator is and we have an active connection
+     * 确认coordinator 和服务端的coordinator 连接正常
      *
      * @return true if the coordinator is unknown
      */

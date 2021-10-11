@@ -271,7 +271,7 @@ public class NetworkClient implements KafkaClient {
         handleConnections();
         handleTimedOutRequests(responses, updatedNow);
 
-        // invoke callbacks
+        // invoke callbacks 执行请求方法的回调
         for (ClientResponse response : responses) {
             if (response.request().hasCallback()) {
                 try {

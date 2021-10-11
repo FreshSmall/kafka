@@ -224,7 +224,7 @@ public class ConsumerNetworkClient implements Closeable {
 
     private void poll(long timeout, long now, boolean executeDelayedTasks) {
         // send all the requests we can send now
-        // 循环处理unset中缓存的请求
+        // 循环处理unsent中缓存的请求
         trySend(now);
 
         // ensure we don't poll any longer than the deadline for
@@ -232,7 +232,7 @@ public class ConsumerNetworkClient implements Closeable {
         // 计算超时时间，此超时时间由timeout 与delayedTasks 队列中最近要执行的定时任务的时间共同决定。
         timeout = Math.min(timeout, delayedTasks.nextTimeout(now));
         // 将KafkaChannel.send字段指定的消息发送出去。NetworkClient.poll 方法可能会更新Metadata使用一系列handle*()方法处理请求响应、连接断开、超时等情况，并调用
-        // 每个请求的回调函数。
+        // 处理请求的回调函数。
         clientPoll(timeout, now);
         now = time.milliseconds();
 

@@ -22,6 +22,7 @@ import java.util.Map;
 
 /**
  * The set of requests which have been sent or are being sent but haven't yet received a response
+ * request 集合（准备发送或正在发送没有收到响应）
  */
 final class InFlightRequests {
 

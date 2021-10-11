@@ -342,9 +342,9 @@ public class Selector implements Selectable {
             } catch (Exception e) {
                 String desc = channel.socketDescription();
                 if (e instanceof IOException)
-                    log.debug("Connection with {} disconnected", desc, e);
+                    log.info("Connection with {} disconnected", desc, e);
                 else
-                    log.warn("Unexpected error from {}; closing connection", desc, e);
+                    log.info("Unexpected error from {}; closing connection", desc, e);
                 close(channel);
                 this.disconnected.add(channel.id());
             }

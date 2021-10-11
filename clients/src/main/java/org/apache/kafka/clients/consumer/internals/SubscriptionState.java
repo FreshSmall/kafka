@@ -75,7 +75,11 @@ public class SubscriptionState {
     /* the list of partitions currently assigned */
     private final Map<TopicPartition, TopicPartitionState> assignment;
 
-    /* do we need to request a partition assignment from the coordinator? */
+    /* do we need to request a partition assignment from the coordinator?
+    *  1、修改订阅时再分配
+    *  2、消费者取消订阅时再分配
+    *  3、
+    * */
     private boolean needsPartitionAssignment;
 
     /* do we need to request the latest committed offsets from the coordinator? */

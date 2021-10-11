@@ -6,7 +6,6 @@
 
 package demo;
 
-import kafka.examples.KafkaProperties;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -21,7 +20,7 @@ import java.util.Properties;
  * @team wuhan operational dev.
  * @date 2021/10/9 11:45
  **/
-public class ConsumerDemo {
+public class ConsumerDemo{
 
     private static final String TOPIC = "kafkaSourceCode"; //kafka创建的topic
     private static final String BROKER_LIST = "localhost:9092"; //broker的地址和端口
@@ -43,18 +42,21 @@ public class ConsumerDemo {
 //        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
         consumer = new KafkaConsumer<>(props);
-
         consumer.subscribe(Collections.singletonList(TOPIC));
 
-        for (int i = 0; i < 20; i++) {
-            ConsumerRecords<Integer, String> records = consumer.poll(1000);
-            for (ConsumerRecord<Integer, String> record : records) {
-                System.out.println(
+        try{
+            for (int i = 0; i < 20; i++) {
+                ConsumerRecords<Integer, String> records = consumer.poll(1000);
+                for (ConsumerRecord<Integer, String> record : records) {
+                    System.out.println(
                         "Received message: (" + record.key() + ", " + record.value() + ") at offset "
-                                + record.offset());
+                            + record.offset());
+                }
+                Thread.sleep(500);
             }
-            Thread.sleep(500);
+        }finally {
+            consumer.close();
         }
-    }
 
+    }
 }

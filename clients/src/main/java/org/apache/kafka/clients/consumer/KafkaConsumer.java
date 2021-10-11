@@ -1,14 +1,16 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more contributor license agreements. See the NOTICE
- * file distributed with this work for additional information regarding copyright ownership. The ASF licenses this file
- * to You under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
- *
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements. See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License. You may obtain a
+ * copy of the License at
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.kafka.clients.consumer;
 
@@ -65,92 +67,105 @@ import java.util.regex.Pattern;
 /**
  * A Kafka client that consumes records from a Kafka cluster.
  * <p>
- * It will transparently handle the failure of servers in the Kafka cluster, and transparently adapt as partitions of
- * data it fetches migrate within the cluster. This client also interacts with the server to allow groups of
- * consumers to load balance consumption using consumer groups (as described below).
+ * It will transparently handle the failure of servers in the Kafka cluster, and transparently adapt
+ * as partitions of data it fetches migrate within the cluster. This client also interacts with the
+ * server to allow groups of consumers to load balance consumption using consumer groups (as
+ * described below).
  * <p>
- * The consumer maintains TCP connections to the necessary brokers to fetch data.
- * Failure to close the consumer after use will leak these connections.
- * The consumer is not thread-safe. See <a href="#multithreaded">Multi-threaded Processing</a> for more details.
+ * The consumer maintains TCP connections to the necessary brokers to fetch data. Failure to close
+ * the consumer after use will leak these connections. The consumer is not thread-safe. See <a
+ * href="#multithreaded">Multi-threaded Processing</a> for more details.
  *
  * <h3>Offsets and Consumer Position</h3>
- * Kafka maintains a numerical offset for each record in a partition. This offset acts as a kind of unique identifier of
- * a record within that partition, and also denotes the position of the consumer in the partition. That is, a consumer
- * which has position 5 has consumed records with offsets 0 through 4 and will next receive the record with offset 5. There
- * are actually two notions of position relevant to the user of the consumer.
+ * Kafka maintains a numerical offset for each record in a partition. This offset acts as a kind of
+ * unique identifier of a record within that partition, and also denotes the position of the
+ * consumer in the partition. That is, a consumer which has position 5 has consumed records with
+ * offsets 0 through 4 and will next receive the record with offset 5. There are actually two
+ * notions of position relevant to the user of the consumer.
  * <p>
- * The {@link #position(TopicPartition) position} of the consumer gives the offset of the next record that will be given
- * out. It will be one larger than the highest offset the consumer has seen in that partition. It automatically advances
- * every time the consumer receives data calls {@link #poll(long)} and receives messages.
+ * The {@link #position(TopicPartition) position} of the consumer gives the offset of the next
+ * record that will be given out. It will be one larger than the highest offset the consumer has
+ * seen in that partition. It automatically advances every time the consumer receives data calls
+ * {@link #poll(long)} and receives messages.
  * <p>
- * The {@link #commitSync() committed position} is the last offset that has been saved securely. Should the
- * process fail and restart, this is the offset that it will recover to. The consumer can either automatically commit
- * offsets periodically; or it can choose to control this committed position manually by calling
- * {@link #commitSync() commitSync}, which will block until the offsets have been successfully committed
- * or fatal error has happened during the commit process, or {@link #commitAsync(OffsetCommitCallback) commitAsync} which is non-blocking
- * and will trigger {@link OffsetCommitCallback} upon either successfully committed or fatally failed.
+ * The {@link #commitSync() committed position} is the last offset that has been saved securely.
+ * Should the process fail and restart, this is the offset that it will recover to. The consumer can
+ * either automatically commit offsets periodically; or it can choose to control this committed
+ * position manually by calling {@link #commitSync() commitSync}, which will block until the offsets
+ * have been successfully committed or fatal error has happened during the commit process, or {@link
+ * #commitAsync(OffsetCommitCallback) commitAsync} which is non-blocking and will trigger {@link
+ * OffsetCommitCallback} upon either successfully committed or fatally failed.
  * <p>
- * This distinction gives the consumer control over when a record is considered consumed. It is discussed in further
- * detail below.
+ * This distinction gives the consumer control over when a record is considered consumed. It is
+ * discussed in further detail below.
  *
  * <h3>Consumer Groups and Topic Subscriptions</h3>
- *
- * Kafka uses the concept of <i>consumer groups</i> to allow a pool of processes to divide the work of consuming and
- * processing records. These processes can either be running on the same machine or, as is more likely, they can be
- * distributed over many machines to provide scalability and fault tolerance for processing.
  * <p>
- * Each Kafka consumer is able to configure a consumer group that it belongs to, and can dynamically set the list
- * of topics it wants to subscribe to through one of the {@link #subscribe(Collection, ConsumerRebalanceListener) subscribe}
- * APIs. Kafka will deliver each message in the subscribed topics to one process in each consumer group.
- * This is achieved by balancing the partitions between all members in the consumer group so that each partition is
- * assigned to exactly one consumer in the group. So if there is a topic with four partitions, and a consumer group with two
+ * Kafka uses the concept of <i>consumer groups</i> to allow a pool of processes to divide the work
+ * of consuming and processing records. These processes can either be running on the same machine
+ * or, as is more likely, they can be distributed over many machines to provide scalability and
+ * fault tolerance for processing.
+ * <p>
+ * Each Kafka consumer is able to configure a consumer group that it belongs to, and can dynamically
+ * set the list of topics it wants to subscribe to through one of the {@link #subscribe(Collection,
+ * ConsumerRebalanceListener) subscribe} APIs. Kafka will deliver each message in the subscribed
+ * topics to one process in each consumer group. This is achieved by balancing the partitions
+ * between all members in the consumer group so that each partition is assigned to exactly one
+ * consumer in the group. So if there is a topic with four partitions, and a consumer group with two
  * processes, each process would consume from two partitions.
  * <p>
- * Membership in a consumer group is maintained dynamically: if a process fails, the partitions assigned to it will
- * be reassigned to other consumers in the same group. Similarly, if a new consumer joins the group, partitions will be moved
- * from existing consumers to the new one. This is known as <i>rebalancing</i> the group and is discussed in more
- * detail <a href="#failuredetection">below</a>. Note that the same process is also used when new partitions are added
- * to one of the subscribed topics: the group automatically detects the new partitions and rebalances the group so
- * that every new partition is assigned to one of the members.
+ * Membership in a consumer group is maintained dynamically: if a process fails, the partitions
+ * assigned to it will be reassigned to other consumers in the same group. Similarly, if a new
+ * consumer joins the group, partitions will be moved from existing consumers to the new one. This
+ * is known as <i>rebalancing</i> the group and is discussed in more detail <a
+ * href="#failuredetection">below</a>. Note that the same process is also used when new partitions
+ * are added to one of the subscribed topics: the group automatically detects the new partitions and
+ * rebalances the group so that every new partition is assigned to one of the members.
  * <p>
- * Conceptually you can think of a consumer group as being a single logical subscriber that happens to be made up of
- * multiple processes. As a multi-subscriber system, Kafka naturally supports having any number of consumer groups for a
- * given topic without duplicating data (additional consumers are actually quite cheap).
+ * Conceptually you can think of a consumer group as being a single logical subscriber that happens
+ * to be made up of multiple processes. As a multi-subscriber system, Kafka naturally supports
+ * having any number of consumer groups for a given topic without duplicating data (additional
+ * consumers are actually quite cheap).
  * <p>
- * This is a slight generalization of the functionality that is common in messaging systems. To get semantics similar to
- * a queue in a traditional messaging system all processes would be part of a single consumer group and hence record
- * delivery would be balanced over the group like with a queue. Unlike a traditional messaging system, though, you can
- * have multiple such groups. To get semantics similar to pub-sub in a traditional messaging system each process would
- * have its own consumer group, so each process would subscribe to all the records published to the topic.
+ * This is a slight generalization of the functionality that is common in messaging systems. To get
+ * semantics similar to a queue in a traditional messaging system all processes would be part of a
+ * single consumer group and hence record delivery would be balanced over the group like with a
+ * queue. Unlike a traditional messaging system, though, you can have multiple such groups. To get
+ * semantics similar to pub-sub in a traditional messaging system each process would have its own
+ * consumer group, so each process would subscribe to all the records published to the topic.
  * <p>
- * In addition, when group reassignment happens automatically, consumers can be notified through {@link ConsumerRebalanceListener},
- * which allows them to finish necessary application-level logic such as state cleanup, manual offset
- * commits (note that offsets are always committed for a given consumer group), etc.
- * See <a href="#rebalancecallback">Storing Offsets Outside Kafka</a> for more details
+ * In addition, when group reassignment happens automatically, consumers can be notified through
+ * {@link ConsumerRebalanceListener}, which allows them to finish necessary application-level logic
+ * such as state cleanup, manual offset commits (note that offsets are always committed for a given
+ * consumer group), etc. See <a href="#rebalancecallback">Storing Offsets Outside Kafka</a> for more
+ * details
  * <p>
- * It is also possible for the consumer to <a href="#manualassignment">manually assign</a> specific partitions
- * (similar to the older "simple" consumer) using {@link #assign(Collection)}. In this case, dynamic partition
- * assignment and consumer group coordination will be disabled.
+ * It is also possible for the consumer to <a href="#manualassignment">manually assign</a> specific
+ * partitions (similar to the older "simple" consumer) using {@link #assign(Collection)}. In this
+ * case, dynamic partition assignment and consumer group coordination will be disabled.
  *
  * <h3><a name="failuredetection">Detecting Consumer Failures</a></h3>
- *
- * After subscribing to a set of topics, the consumer will automatically join the group when {@link #poll(long)} is
- * invoked. The poll API is designed to ensure consumer liveness. As long as you continue to call poll, the consumer
- * will stay in the group and continue to receive messages from the partitions it was assigned. Underneath the covers,
- * the poll API sends periodic heartbeats to the server; when you stop calling poll (perhaps because an exception was thrown),
- * then no heartbeats will be sent. If a period of the configured <i>session timeout</i> elapses before the server
- * has received a heartbeat, then the consumer will be kicked out of the group and its partitions will be reassigned.
- * This is designed to prevent situations where the consumer has failed, yet continues to hold onto the partitions
- * it was assigned (thus preventing active consumers in the group from taking them). To stay in the group, you
- * have to prove you are still alive by calling poll.
  * <p>
- * The implication of this design is that message processing time in the poll loop must be bounded so that
- * heartbeats can be sent before expiration of the session timeout. What typically happens when processing time
- * exceeds the session timeout is that the consumer won't be able to commit offsets for any of the processed records.
- * For example, this is indicated by a {@link CommitFailedException} thrown from {@link #commitSync()}. This
- * guarantees that only active members of the group are allowed to commit offsets. If the consumer
- * has been kicked out of the group, then its partitions will have been assigned to another member, which will be
- * committing its own offsets as it handles new records. This gives offset commits an isolation guarantee.
+ * After subscribing to a set of topics, the consumer will automatically join the group when {@link
+ * #poll(long)} is invoked. The poll API is designed to ensure consumer liveness. As long as you
+ * continue to call poll, the consumer will stay in the group and continue to receive messages from
+ * the partitions it was assigned. Underneath the covers, the poll API sends periodic heartbeats to
+ * the server; when you stop calling poll (perhaps because an exception was thrown), then no
+ * heartbeats will be sent. If a period of the configured <i>session timeout</i> elapses before the
+ * server has received a heartbeat, then the consumer will be kicked out of the group and its
+ * partitions will be reassigned. This is designed to prevent situations where the consumer has
+ * failed, yet continues to hold onto the partitions it was assigned (thus preventing active
+ * consumers in the group from taking them). To stay in the group, you have to prove you are still
+ * alive by calling poll.
+ * <p>
+ * The implication of this design is that message processing time in the poll loop must be bounded
+ * so that heartbeats can be sent before expiration of the session timeout. What typically happens
+ * when processing time exceeds the session timeout is that the consumer won't be able to commit
+ * offsets for any of the processed records. For example, this is indicated by a {@link
+ * CommitFailedException} thrown from {@link #commitSync()}. This guarantees that only active
+ * members of the group are allowed to commit offsets. If the consumer has been kicked out of the
+ * group, then its partitions will have been assigned to another member, which will be committing
+ * its own offsets as it handles new records. This gives offset commits an isolation guarantee.
  * <p>
  * The consumer provides two configuration settings to control this behavior:
  * <ol>
@@ -198,7 +213,7 @@ import java.util.regex.Pattern;
  *             System.out.printf(&quot;offset = %d, key = %s, value = %s&quot;, record.offset(), record.key(), record.value());
  *     }
  * </pre>
- *
+ * <p>
  * Setting <code>enable.auto.commit</code> means that offsets are committed automatically with a frequency controlled by
  * the config <code>auto.commit.interval.ms</code>.
  * <p>
@@ -221,7 +236,7 @@ import java.util.regex.Pattern;
  * are saying that our record's key and value will just be simple strings.
  *
  * <h4>Manual Offset Control</h4>
- *
+ * <p>
  * Instead of relying on the consumer to periodically commit consumed offsets, users can also control when messages
  * should be considered as consumed and hence commit their offsets. This is useful when the consumption of the messages
  * are coupled with some processing logic and hence a message should not be considered as consumed until it is completed processing.
@@ -262,7 +277,7 @@ import java.util.regex.Pattern;
  *         }
  *     }
  * </pre>
- *
+ * <p>
  * The above example uses {@link #commitSync() commitSync} to mark all received messages as committed. In some cases
  * you may wish to have even finer control over which messages have been committed by specifying an offset explicitly.
  * In the example below we commit offset after we finish handling the messages in each partition.
@@ -289,7 +304,7 @@ import java.util.regex.Pattern;
  * Thus, when calling {@link #commitSync(Map) commitSync(offsets)} you should add one to the offset of the last message processed.
  *
  * <h4><a name="manualassignment">Manual Partition Assignment</a></h4>
- *
+ * <p>
  * In the previous examples, we subscribed to the topics we were interested in and let Kafka dynamically assign a
  * fair share of the partitions for those topics based on the active consumers in the group. However, in
  * some cases you may need finer control over the specific partitions that are assigned. For example:
@@ -312,7 +327,7 @@ import java.util.regex.Pattern;
  *     TopicPartition partition1 = new TopicPartition(topic, 1);
  *     consumer.assign(Arrays.asList(partition0, partition1));
  * </pre>
- *
+ * <p>
  * Once assigned, you can call {@link #poll(long) poll} in a loop, just as in the preceding examples to consume
  * records. The group that the consumer specifies is still used for committing offsets, but now the set of partitions
  * will only change with another call to {@link #assign(Collection) assign}. Manual partition assignment does
@@ -324,7 +339,7 @@ import java.util.regex.Pattern;
  * with dynamic partition assignment through topic subscription (i.e. using {@link #subscribe(Collection) subscribe}).
  *
  * <h4><a name="rebalancecallback">Storing Offsets Outside Kafka</h4>
- *
+ * <p>
  * The consumer application need not use Kafka's built-in offset storage, it can store offsets in a store of its own
  * choosing. The primary use case for this is allowing the application to store both the offset and the results of the
  * consumption in the same system in a way that both the results and offsets are stored atomically. This is not always
@@ -368,7 +383,7 @@ import java.util.regex.Pattern;
  * partitions that are moved elsewhere.
  *
  * <h4>Controlling The Consumer's Position</h4>
- *
+ * <p>
  * In most use cases the consumer will simply consume records from beginning to end, periodically committing its
  * position (either automatically or manually). However Kafka allows the consumer to manually control its position,
  * moving forward or backwards in a partition at will. This means a consumer can re-consume older records, or skip to
@@ -389,7 +404,7 @@ import java.util.regex.Pattern;
  * {@link #seekToBeginning(Collection)} and {@link #seekToEnd(Collection)} respectively).
  *
  * <h4>Consumption Flow Control</h4>
- *
+ * <p>
  * If a consumer is assigned multiple partitions to fetch data from, it will try to consume from all of them at the same time,
  * effectively giving these partitions the same priority for consumption. However in some cases consumers may want to
  * first focus on fetching from some subset of the assigned partitions at full speed, and only start fetching other partitions
@@ -408,7 +423,7 @@ import java.util.regex.Pattern;
  * on the specified paused partitions respectively in the future {@link #poll(long)} calls.
  *
  * <h3><a name="multithreaded">Multi-threaded Processing</a></h3>
- *
+ * <p>
  * The Kafka consumer is NOT thread-safe. All network I/O happens in the thread of the application
  * making the call. It is the responsibility of the user to ensure that multi-threaded access
  * is properly synchronized. Un-synchronized access will result in {@link ConcurrentModificationException}.
@@ -446,7 +461,7 @@ import java.util.regex.Pattern;
  *     }
  * }
  * </pre>
- *
+ * <p>
  * Then in a separate thread, the consumer can be shutdown by setting the closed flag and waking up the consumer.
  *
  * <p>
@@ -461,7 +476,7 @@ import java.util.regex.Pattern;
  *
  *
  * <h4>1. One Consumer Per Thread</h4>
- *
+ * <p>
  * A simple option is to give each thread its own consumer instance. Here are the pros and cons of this approach:
  * <ul>
  * <li><b>PRO</b>: It is the easiest to implement
@@ -476,11 +491,11 @@ import java.util.regex.Pattern;
  * </ul>
  *
  * <h4>2. Decouple Consumption and Processing</h4>
- *
+ * <p>
  * Another alternative is to have one or more consumer threads that do all data consumption and hands off
  * {@link ConsumerRecords} instances to a blocking queue consumed by a pool of processor threads that actually handle
  * the record processing.
- *
+ * <p>
  * This option likewise has pros and cons:
  * <ul>
  * <li><b>PRO</b>: This option allows independently scaling the number of consumers and processors. This makes it
@@ -491,11 +506,10 @@ import java.util.regex.Pattern;
  * <li><b>CON</b>: Manually committing the position becomes harder as it requires that all threads co-ordinate to ensure
  * that processing is complete for that partition.
  * </ul>
- *
+ * <p>
  * There are many possible variations on this approach. For example each processor thread can have its own queue, and
  * the consumer threads can hash into these queues using the TopicPartition to ensure in-order consumption and simplify
  * commit.
- *
  */
 public class KafkaConsumer<K, V> implements Consumer<K, V> {
 
@@ -535,10 +549,10 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     private final AtomicInteger refcount = new AtomicInteger(0);
 
     /**
-     * A consumer is instantiated by providing a set of key-value pairs as configuration. Valid configuration strings
-     * are documented <a href="http://kafka.apache.org/documentation.html#consumerconfigs" >here</a>. Values can be
-     * either strings or objects of the appropriate type (for example a numeric configuration would accept either the
-     * string "42" or the integer 42).
+     * A consumer is instantiated by providing a set of key-value pairs as configuration. Valid
+     * configuration strings are documented <a href="http://kafka.apache.org/documentation.html#consumerconfigs"
+     * >here</a>. Values can be either strings or objects of the appropriate type (for example a
+     * numeric configuration would accept either the string "42" or the integer 42).
      * <p>
      * Valid configuration strings are documented at {@link ConsumerConfig}
      *
@@ -549,126 +563,150 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * A consumer is instantiated by providing a set of key-value pairs as configuration, and a key and a value {@link Deserializer}.
+     * A consumer is instantiated by providing a set of key-value pairs as configuration, and a key
+     * and a value {@link Deserializer}.
      * <p>
      * Valid configuration strings are documented at {@link ConsumerConfig}
      *
-     * @param configs The consumer configs
-     * @param keyDeserializer The deserializer for key that implements {@link Deserializer}. The configure() method
-     *            won't be called in the consumer when the deserializer is passed in directly.
-     * @param valueDeserializer The deserializer for value that implements {@link Deserializer}. The configure() method
-     *            won't be called in the consumer when the deserializer is passed in directly.
+     * @param configs           The consumer configs
+     * @param keyDeserializer   The deserializer for key that implements {@link Deserializer}. The
+     *                          configure() method won't be called in the consumer when the
+     *                          deserializer is passed in directly.
+     * @param valueDeserializer The deserializer for value that implements {@link Deserializer}. The
+     *                          configure() method won't be called in the consumer when the
+     *                          deserializer is passed in directly.
      */
     public KafkaConsumer(Map<String, Object> configs,
-                         Deserializer<K> keyDeserializer,
-                         Deserializer<V> valueDeserializer) {
-        this(new ConsumerConfig(ConsumerConfig.addDeserializerToConfig(configs, keyDeserializer, valueDeserializer)),
+        Deserializer<K> keyDeserializer,
+        Deserializer<V> valueDeserializer) {
+        this(new ConsumerConfig(
+                ConsumerConfig.addDeserializerToConfig(configs, keyDeserializer, valueDeserializer)),
             keyDeserializer,
             valueDeserializer);
     }
 
     /**
-     * A consumer is instantiated by providing a {@link java.util.Properties} object as configuration. Valid
-     * configuration strings are documented at {@link ConsumerConfig} A consumer is instantiated by providing a
-     * {@link java.util.Properties} object as configuration. Valid configuration strings are documented at
-     * {@link ConsumerConfig}
+     * A consumer is instantiated by providing a {@link java.util.Properties} object as
+     * configuration. Valid configuration strings are documented at {@link ConsumerConfig} A
+     * consumer is instantiated by providing a {@link java.util.Properties} object as configuration.
+     * Valid configuration strings are documented at {@link ConsumerConfig}
      */
     public KafkaConsumer(Properties properties) {
         this(properties, null, null);
     }
 
     /**
-     * A consumer is instantiated by providing a {@link java.util.Properties} object as configuration, and a
-     * key and a value {@link Deserializer}.
+     * A consumer is instantiated by providing a {@link java.util.Properties} object as
+     * configuration, and a key and a value {@link Deserializer}.
      * <p>
      * Valid configuration strings are documented at {@link ConsumerConfig}
      *
-     * @param properties The consumer configuration properties
-     * @param keyDeserializer The deserializer for key that implements {@link Deserializer}. The configure() method
-     *            won't be called in the consumer when the deserializer is passed in directly.
-     * @param valueDeserializer The deserializer for value that implements {@link Deserializer}. The configure() method
-     *            won't be called in the consumer when the deserializer is passed in directly.
+     * @param properties        The consumer configuration properties
+     * @param keyDeserializer   The deserializer for key that implements {@link Deserializer}. The
+     *                          configure() method won't be called in the consumer when the
+     *                          deserializer is passed in directly.
+     * @param valueDeserializer The deserializer for value that implements {@link Deserializer}. The
+     *                          configure() method won't be called in the consumer when the
+     *                          deserializer is passed in directly.
      */
     public KafkaConsumer(Properties properties,
-                         Deserializer<K> keyDeserializer,
-                         Deserializer<V> valueDeserializer) {
-        this(new ConsumerConfig(ConsumerConfig.addDeserializerToConfig(properties, keyDeserializer, valueDeserializer)),
-             keyDeserializer,
-             valueDeserializer);
+        Deserializer<K> keyDeserializer,
+        Deserializer<V> valueDeserializer) {
+        this(new ConsumerConfig(
+                ConsumerConfig.addDeserializerToConfig(properties, keyDeserializer, valueDeserializer)),
+            keyDeserializer,
+            valueDeserializer);
     }
 
     @SuppressWarnings("unchecked")
     private KafkaConsumer(ConsumerConfig config,
-                          Deserializer<K> keyDeserializer,
-                          Deserializer<V> valueDeserializer) {
+        Deserializer<K> keyDeserializer,
+        Deserializer<V> valueDeserializer) {
         try {
             log.debug("Starting the Kafka consumer");
             this.requestTimeoutMs = config.getInt(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG);
             int sessionTimeOutMs = config.getInt(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG);
             int fetchMaxWaitMs = config.getInt(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG);
-            if (this.requestTimeoutMs <= sessionTimeOutMs || this.requestTimeoutMs <= fetchMaxWaitMs)
-                throw new ConfigException(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG + " should be greater than " + ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG + " and " + ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG);
+            if (this.requestTimeoutMs <= sessionTimeOutMs
+                || this.requestTimeoutMs <= fetchMaxWaitMs) {
+                throw new ConfigException(
+                    ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG + " should be greater than "
+                        + ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG + " and "
+                        + ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG);
+            }
             this.time = new SystemTime();
 
             String clientId = config.getString(ConsumerConfig.CLIENT_ID_CONFIG);
-            if (clientId.length() <= 0)
+            if (clientId.length() <= 0) {
                 clientId = "consumer-" + CONSUMER_CLIENT_ID_SEQUENCE.getAndIncrement();
+            }
             this.clientId = clientId;
             Map<String, String> metricsTags = new LinkedHashMap<>();
             metricsTags.put("client-id", clientId);
-            MetricConfig metricConfig = new MetricConfig().samples(config.getInt(ConsumerConfig.METRICS_NUM_SAMPLES_CONFIG))
-                    .timeWindow(config.getLong(ConsumerConfig.METRICS_SAMPLE_WINDOW_MS_CONFIG), TimeUnit.MILLISECONDS)
-                    .tags(metricsTags);
-            List<MetricsReporter> reporters = config.getConfiguredInstances(ConsumerConfig.METRIC_REPORTER_CLASSES_CONFIG,
+            MetricConfig metricConfig = new MetricConfig()
+                .samples(config.getInt(ConsumerConfig.METRICS_NUM_SAMPLES_CONFIG))
+                .timeWindow(config.getLong(ConsumerConfig.METRICS_SAMPLE_WINDOW_MS_CONFIG),
+                    TimeUnit.MILLISECONDS)
+                .tags(metricsTags);
+            List<MetricsReporter> reporters = config
+                .getConfiguredInstances(ConsumerConfig.METRIC_REPORTER_CLASSES_CONFIG,
                     MetricsReporter.class);
             reporters.add(new JmxReporter(JMX_PREFIX));
             this.metrics = new Metrics(metricConfig, reporters, time);
             this.retryBackoffMs = config.getLong(ConsumerConfig.RETRY_BACKOFF_MS_CONFIG);
-            this.metadata = new Metadata(retryBackoffMs, config.getLong(ConsumerConfig.METADATA_MAX_AGE_CONFIG));
-            List<InetSocketAddress> addresses = ClientUtils.parseAndValidateAddresses(config.getList(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG));
+            this.metadata = new Metadata(retryBackoffMs,
+                config.getLong(ConsumerConfig.METADATA_MAX_AGE_CONFIG));
+            List<InetSocketAddress> addresses = ClientUtils
+                .parseAndValidateAddresses(config.getList(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG));
             this.metadata.update(Cluster.bootstrap(addresses), 0);
             String metricGrpPrefix = "consumer";
             ChannelBuilder channelBuilder = ClientUtils.createChannelBuilder(config.values());
             NetworkClient netClient = new NetworkClient(
-                    new Selector(config.getLong(ConsumerConfig.CONNECTIONS_MAX_IDLE_MS_CONFIG), metrics, time, metricGrpPrefix, channelBuilder),
-                    this.metadata,
-                    clientId,
-                    100, // a fixed large enough value will suffice
-                    config.getLong(ConsumerConfig.RECONNECT_BACKOFF_MS_CONFIG),
-                    config.getInt(ConsumerConfig.SEND_BUFFER_CONFIG),
-                    config.getInt(ConsumerConfig.RECEIVE_BUFFER_CONFIG),
-                    config.getInt(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG), time);
+                new Selector(config.getLong(ConsumerConfig.CONNECTIONS_MAX_IDLE_MS_CONFIG), metrics,
+                    time, metricGrpPrefix, channelBuilder),
+                this.metadata,
+                clientId,
+                100, // a fixed large enough value will suffice
+                config.getLong(ConsumerConfig.RECONNECT_BACKOFF_MS_CONFIG),
+                config.getInt(ConsumerConfig.SEND_BUFFER_CONFIG),
+                config.getInt(ConsumerConfig.RECEIVE_BUFFER_CONFIG),
+                config.getInt(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG), time);
             this.client = new ConsumerNetworkClient(netClient, metadata, time, retryBackoffMs,
-                    config.getInt(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG));
-            OffsetResetStrategy offsetResetStrategy = OffsetResetStrategy.valueOf(config.getString(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG).toUpperCase(Locale.ROOT));
+                config.getInt(ConsumerConfig.REQUEST_TIMEOUT_MS_CONFIG));
+            OffsetResetStrategy offsetResetStrategy = OffsetResetStrategy.valueOf(
+                config.getString(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG).toUpperCase(Locale.ROOT));
             this.subscriptions = new SubscriptionState(offsetResetStrategy);
             List<PartitionAssignor> assignors = config.getConfiguredInstances(
-                    ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG,
-                    PartitionAssignor.class);
+                ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG,
+                PartitionAssignor.class);
             // load interceptors and make sure they get clientId
             Map<String, Object> userProvidedConfigs = config.originals();
             userProvidedConfigs.put(ConsumerConfig.CLIENT_ID_CONFIG, clientId);
-            List<ConsumerInterceptor<K, V>> interceptorList = (List) (new ConsumerConfig(userProvidedConfigs)).getConfiguredInstances(ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG,
+            List<ConsumerInterceptor<K, V>> interceptorList = (List) (new ConsumerConfig(
+                userProvidedConfigs))
+                .getConfiguredInstances(ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG,
                     ConsumerInterceptor.class);
-            this.interceptors = interceptorList.isEmpty() ? null : new ConsumerInterceptors<>(interceptorList);
+            this.interceptors =
+                interceptorList.isEmpty() ? null : new ConsumerInterceptors<>(interceptorList);
             this.coordinator = new ConsumerCoordinator(this.client,
-                    config.getString(ConsumerConfig.GROUP_ID_CONFIG),
-                    config.getInt(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG),
-                    config.getInt(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG),
-                    assignors,
-                    this.metadata,
-                    this.subscriptions,
-                    metrics,
-                    metricGrpPrefix,
-                    this.time,
-                    retryBackoffMs,
-                    new ConsumerCoordinator.DefaultOffsetCommitCallback(),
-                    config.getBoolean(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG),
-                    config.getLong(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG),
-                    this.interceptors,
-                    config.getBoolean(ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG));
+                config.getString(ConsumerConfig.GROUP_ID_CONFIG),
+                config.getInt(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG),
+                config.getInt(ConsumerConfig.HEARTBEAT_INTERVAL_MS_CONFIG),
+                assignors,
+                this.metadata,
+                this.subscriptions,
+                metrics,
+                metricGrpPrefix,
+                this.time,
+                retryBackoffMs,
+                new ConsumerCoordinator.DefaultOffsetCommitCallback(),
+                config.getBoolean(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG),
+                config.getLong(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG),
+                this.interceptors,
+                config.getBoolean(ConsumerConfig.EXCLUDE_INTERNAL_TOPICS_CONFIG));
             if (keyDeserializer == null) {
-                this.keyDeserializer = config.getConfiguredInstance(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
+                this.keyDeserializer = config
+                    .getConfiguredInstance(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG,
                         Deserializer.class);
                 this.keyDeserializer.configure(config.originals(), true);
             } else {
@@ -676,7 +714,8 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
                 this.keyDeserializer = keyDeserializer;
             }
             if (valueDeserializer == null) {
-                this.valueDeserializer = config.getConfiguredInstance(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
+                this.valueDeserializer = config
+                    .getConfiguredInstance(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
                         Deserializer.class);
                 this.valueDeserializer.configure(config.originals(), false);
             } else {
@@ -684,19 +723,19 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
                 this.valueDeserializer = valueDeserializer;
             }
             this.fetcher = new Fetcher<>(this.client,
-                    config.getInt(ConsumerConfig.FETCH_MIN_BYTES_CONFIG),
-                    config.getInt(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG),
-                    config.getInt(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG),
-                    config.getInt(ConsumerConfig.MAX_POLL_RECORDS_CONFIG),
-                    config.getBoolean(ConsumerConfig.CHECK_CRCS_CONFIG),
-                    this.keyDeserializer,
-                    this.valueDeserializer,
-                    this.metadata,
-                    this.subscriptions,
-                    metrics,
-                    metricGrpPrefix,
-                    this.time,
-                    this.retryBackoffMs);
+                config.getInt(ConsumerConfig.FETCH_MIN_BYTES_CONFIG),
+                config.getInt(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG),
+                config.getInt(ConsumerConfig.MAX_PARTITION_FETCH_BYTES_CONFIG),
+                config.getInt(ConsumerConfig.MAX_POLL_RECORDS_CONFIG),
+                config.getBoolean(ConsumerConfig.CHECK_CRCS_CONFIG),
+                this.keyDeserializer,
+                this.valueDeserializer,
+                this.metadata,
+                this.subscriptions,
+                metrics,
+                metricGrpPrefix,
+                this.time,
+                this.retryBackoffMs);
 
             config.logUnused();
             AppInfoParser.registerAppInfo(JMX_PREFIX, clientId);
@@ -713,18 +752,18 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
 
     // visible for testing
     KafkaConsumer(String clientId,
-                  ConsumerCoordinator coordinator,
-                  Deserializer<K> keyDeserializer,
-                  Deserializer<V> valueDeserializer,
-                  Fetcher<K, V> fetcher,
-                  ConsumerInterceptors<K, V> interceptors,
-                  Time time,
-                  ConsumerNetworkClient client,
-                  Metrics metrics,
-                  SubscriptionState subscriptions,
-                  Metadata metadata,
-                  long retryBackoffMs,
-                  long requestTimeoutMs) {
+        ConsumerCoordinator coordinator,
+        Deserializer<K> keyDeserializer,
+        Deserializer<V> valueDeserializer,
+        Fetcher<K, V> fetcher,
+        ConsumerInterceptors<K, V> interceptors,
+        Time time,
+        ConsumerNetworkClient client,
+        Metrics metrics,
+        SubscriptionState subscriptions,
+        Metadata metadata,
+        long retryBackoffMs,
+        long requestTimeoutMs) {
         this.clientId = clientId;
         this.coordinator = coordinator;
         this.keyDeserializer = keyDeserializer;
@@ -741,17 +780,19 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Get the set of partitions currently assigned to this consumer. If subscription happened by directly assigning
-     * partitions using {@link #assign(Collection)} then this will simply return the same partitions that
-     * were assigned. If topic subscription was used, then this will give the set of topic partitions currently assigned
-     * to the consumer (which may be none if the assignment hasn't happened yet, or the partitions are in the
-     * process of getting reassigned).
+     * Get the set of partitions currently assigned to this consumer. If subscription happened by
+     * directly assigning partitions using {@link #assign(Collection)} then this will simply return
+     * the same partitions that were assigned. If topic subscription was used, then this will give
+     * the set of topic partitions currently assigned to the consumer (which may be none if the
+     * assignment hasn't happened yet, or the partitions are in the process of getting reassigned).
+     *
      * @return The set of partitions currently assigned to this consumer
      */
     public Set<TopicPartition> assignment() {
         acquire();
         try {
-            return Collections.unmodifiableSet(new HashSet<>(this.subscriptions.assignedPartitions()));
+            return Collections
+                .unmodifiableSet(new HashSet<>(this.subscriptions.assignedPartitions()));
         } finally {
             release();
         }
@@ -759,7 +800,9 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
 
     /**
      * Get the current subscription. Will return the same topics used in the most recent call to
-     * {@link #subscribe(Collection, ConsumerRebalanceListener)}, or an empty set if no such call has been made.
+     * {@link #subscribe(Collection, ConsumerRebalanceListener)}, or an empty set if no such call
+     * has been made.
+     *
      * @return The set of topics currently subscribed to
      */
     public Set<String> subscription() {
@@ -772,16 +815,17 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Subscribe to the given list of topics to get dynamically
-     * assigned partitions. <b>Topic subscriptions are not incremental. This list will replace the current
-     * assignment (if there is one).</b> Note that it is not possible to combine topic subscription with group management
+     * Subscribe to the given list of topics to get dynamically assigned partitions. <b>Topic
+     * subscriptions are not incremental. This list will replace the current assignment (if there is
+     * one).</b> Note that it is not possible to combine topic subscription with group management
      * with manual partition assignment through {@link #assign(Collection)}.
-     *
+     * <p>
      * If the given list of topics is empty, it is treated the same as {@link #unsubscribe()}.
      *
      * <p>
-     * As part of group management, the consumer will keep track of the list of consumers that belong to a particular
-     * group and will trigger a rebalance operation if one of the following events trigger -
+     * As part of group management, the consumer will keep track of the list of consumers that
+     * belong to a particular group and will trigger a rebalance operation if one of the following
+     * events trigger -
      * <ul>
      * <li>Number of partitions change for any of the subscribed list of topics
      * <li>Topic is created or deleted
@@ -795,9 +839,9 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
      * It is guaranteed, however, that the partitions revoked/assigned through this interface are from topics
      * subscribed in this call. See {@link ConsumerRebalanceListener} for more details.
      *
-     * @param topics The list of topics to subscribe to
-     * @param listener Non-null listener instance to get notifications on partition assignment/revocation for the
-     *                 subscribed topics
+     * @param topics   The list of topics to subscribe to
+     * @param listener Non-null listener instance to get notifications on partition
+     *                 assignment/revocation for the subscribed topics
      */
     @Override
     public void subscribe(Collection<String> topics, ConsumerRebalanceListener listener) {
@@ -819,17 +863,18 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     /**
      * Subscribe to the given list of topics to get dynamically assigned partitions.
      * <b>Topic subscriptions are not incremental. This list will replace the current
-     * assignment (if there is one).</b> It is not possible to combine topic subscription with group management
-     * with manual partition assignment through {@link #assign(Collection)}.
-     *
+     * assignment (if there is one).</b> It is not possible to combine topic subscription with group
+     * management with manual partition assignment through {@link #assign(Collection)}.
+     * <p>
      * If the given list of topics is empty, it is treated the same as {@link #unsubscribe()}.
      *
      * <p>
      * This is a short-hand for {@link #subscribe(Collection, ConsumerRebalanceListener)}, which
-     * uses a noop listener. If you need the ability to either seek to particular offsets, you should prefer
-     * {@link #subscribe(Collection, ConsumerRebalanceListener)}, since group rebalances will cause partition offsets
-     * to be reset. You should also prefer to provide your own listener if you are doing your own offset
-     * management since the listener gives you an opportunity to commit offsets before a rebalance finishes.
+     * uses a noop listener. If you need the ability to either seek to particular offsets, you
+     * should prefer {@link #subscribe(Collection, ConsumerRebalanceListener)}, since group
+     * rebalances will cause partition offsets to be reset. You should also prefer to provide your
+     * own listener if you are doing your own offset management since the listener gives you an
+     * opportunity to commit offsets before a rebalance finishes.
      *
      * @param topics The list of topics to subscribe to
      */
@@ -839,12 +884,12 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Subscribe to all topics matching specified pattern to get dynamically assigned partitions. The pattern matching will be done periodically against topics
-     * existing at the time of check.
+     * Subscribe to all topics matching specified pattern to get dynamically assigned partitions.
+     * The pattern matching will be done periodically against topics existing at the time of check.
      * <p>
      * As part of group management, the consumer will keep track of the list of consumers that
-     * belong to a particular group and will trigger a rebalance operation if one of the
-     * following events trigger -
+     * belong to a particular group and will trigger a rebalance operation if one of the following
+     * events trigger -
      * <ul>
      * <li>Number of partitions change for any of the subscribed list of topics
      * <li>Topic is created or deleted
@@ -868,8 +913,8 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Unsubscribe from topics currently subscribed with {@link #subscribe(Collection)}. This
-     * also clears any partitions directly assigned through {@link #assign(Collection)}.
+     * Unsubscribe from topics currently subscribed with {@link #subscribe(Collection)}. This also
+     * clears any partitions directly assigned through {@link #assign(Collection)}.
      */
     public void unsubscribe() {
         acquire();
@@ -884,13 +929,14 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Manually assign a list of partition to this consumer. This interface does not allow for incremental assignment
-     * and will replace the previous assignment (if there is one).
+     * Manually assign a list of partition to this consumer. This interface does not allow for
+     * incremental assignment and will replace the previous assignment (if there is one).
      * <p>
      * Manual topic assignment through this method does not use the consumer's group management
-     * functionality. As such, there will be no rebalance operation triggered when group membership or cluster and topic
-     * metadata change. Note that it is not possible to use both manual partition assignment with {@link #assign(Collection)}
-     * and group assignment with {@link #subscribe(Collection, ConsumerRebalanceListener)}.
+     * functionality. As such, there will be no rebalance operation triggered when group membership
+     * or cluster and topic metadata change. Note that it is not possible to use both manual
+     * partition assignment with {@link #assign(Collection)} and group assignment with {@link
+     * #subscribe(Collection, ConsumerRebalanceListener)}.
      *
      * @param partitions The list of partitions to assign this consumer
      */
@@ -901,8 +947,9 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
             log.debug("Subscribed to partition(s): {}", Utils.join(partitions, ", "));
             this.subscriptions.assignFromUser(partitions);
             Set<String> topics = new HashSet<>();
-            for (TopicPartition tp : partitions)
+            for (TopicPartition tp : partitions) {
                 topics.add(tp.topic());
+            }
             metadata.setTopics(topics);
         } finally {
             release();
@@ -910,40 +957,55 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Fetch data for the topics or partitions specified using one of the subscribe/assign APIs. It is an error to not have
-     * subscribed to any topics or partitions before polling for data.
+     * Fetch data for the topics or partitions specified using one of the subscribe/assign APIs. It
+     * is an error to not have subscribed to any topics or partitions before polling for data.
      * <p>
-     * On each poll, consumer will try to use the last consumed offset as the starting offset and fetch sequentially. The last
-     * consumed offset can be manually set through {@link #seek(TopicPartition, long)} or automatically set as the last committed
-     * offset for the subscribed list of partitions
+     * On each poll, consumer will try to use the last consumed offset as the starting offset and
+     * fetch sequentially. The last consumed offset can be manually set through {@link
+     * #seek(TopicPartition, long)} or automatically set as the last committed offset for the
+     * subscribed list of partitions
      *
-     *
-     * @param timeout The time, in milliseconds, spent waiting in poll if data is not available in the buffer.
-     *            If 0, returns immediately with any records that are available currently in the buffer, else returns empty.
-     *            Must not be negative.
-     * @return map of topic to records since the last fetch for the subscribed list of topics and partitions
-     *
-     * @throws org.apache.kafka.clients.consumer.InvalidOffsetException if the offset for a partition or set of
-     *             partitions is undefined or out of range and no offset reset policy has been configured
-     * @throws org.apache.kafka.common.errors.WakeupException if {@link #wakeup()} is called before or while this
-     *             function is called
-     * @throws org.apache.kafka.common.errors.AuthorizationException if caller does Read access to any of the subscribed
-     *             topics or to the configured groupId
-     * @throws org.apache.kafka.common.KafkaException for any other unrecoverable errors (e.g. invalid groupId or
-     *             session timeout, errors deserializing key/value pairs, or any new error cases in future versions)
+     * @param timeout The time, in milliseconds, spent waiting in poll if data is not available in
+     *                the buffer. If 0, returns immediately with any records that are available
+     *                currently in the buffer, else returns empty. Must not be negative.
+     * @return map of topic to records since the last fetch for the subscribed list of topics and
+     * partitions
+     * @throws org.apache.kafka.clients.consumer.InvalidOffsetException if the offset for a
+     *                                                                  partition or set of
+     *                                                                  partitions is undefined or
+     *                                                                  out of range and no offset
+     *                                                                  reset policy has been
+     *                                                                  configured
+     * @throws org.apache.kafka.common.errors.WakeupException           if {@link #wakeup()} is
+     *                                                                  called before or while this
+     *                                                                  function is called
+     * @throws org.apache.kafka.common.errors.AuthorizationException    if caller does Read access
+     *                                                                  to any of the subscribed
+     *                                                                  topics or to the configured
+     *                                                                  groupId
+     * @throws org.apache.kafka.common.KafkaException                   for any other unrecoverable
+     *                                                                  errors (e.g. invalid groupId
+     *                                                                  or session timeout, errors
+     *                                                                  deserializing key/value
+     *                                                                  pairs, or any new error
+     *                                                                  cases in future versions)
      */
     @Override
     public ConsumerRecords<K, V> poll(long timeout) {
         acquire();
         try {
-            if (timeout < 0)
+            if (timeout < 0) {
                 throw new IllegalArgumentException("Timeout must not be negative");
+            }
 
             // poll for new data until the timeout expires
+            // 间隔 timeout 时间拉取数据
             long start = time.milliseconds();
             long remaining = timeout;
             do {
+                // 拉取消息，优先从本地缓存中获取，如果没有则会请求服务端，期间会尝试执行分区再分配策略，以及异步提交 offset
                 Map<TopicPartition, List<ConsumerRecord<K, V>>> records = pollOnce(remaining);
+
                 if (!records.isEmpty()) {
                     // before returning the fetched records, we can send off the next round of fetches
                     // and avoid block waiting for their responses to enable pipelining while the user
@@ -955,16 +1017,15 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
                     fetcher.sendFetches();
                     client.pollNoWakeup();
 
-                    if (this.interceptors == null)
+                    if (this.interceptors == null) {
                         return new ConsumerRecords<>(records);
-                    else
+                    } else {
                         return this.interceptors.onConsume(new ConsumerRecords<>(records));
+                    }
                 }
-
                 long elapsed = time.milliseconds() - start;
                 remaining = timeout - elapsed;
             } while (remaining > 0);
-
             return ConsumerRecords.empty();
         } finally {
             release();
@@ -973,23 +1034,27 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
 
     /**
      * Do one round of polling. In addition to checking for new data, this does any needed
-     * heart-beating, auto-commits, and offset updates.
+     * 心跳、自动提交和offset更新 heart-beating, auto-commits, and offset updates. 阻塞的最长时间
+     *
      * @param timeout The maximum time to block in the underlying poll
      * @return The fetched records (may be empty)
      */
     private Map<TopicPartition, List<ConsumerRecord<K, V>>> pollOnce(long timeout) {
         // ensure we have partitions assigned if we expect to
-        if (subscriptions.partitionsAutoAssigned())
+        if (subscriptions.partitionsAutoAssigned()) {
             coordinator.ensurePartitionAssignment();
+        }
 
         // fetch positions if we have partitions we're subscribed to that we
         // don't know the offset for
-        if (!subscriptions.hasAllFetchPositions())
+        if (!subscriptions.hasAllFetchPositions()) {
             updateFetchPositions(this.subscriptions.missingFetchPositions());
+        }
 
         long now = time.milliseconds();
 
         // execute delayed tasks (e.g. autocommits and heartbeats) prior to fetching records
+        // 执行定时任务 HeartbeatTask 和 AutoCommitTask
         client.executeDelayedTasks(now);
 
         // init any new fetches (won't resend pending fetches)
@@ -997,33 +1062,47 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
 
         // if data is available already, e.g. from a previous network client poll() call to commit,
         // then just return it immediately
-        if (!records.isEmpty())
+        if (!records.isEmpty()) {
             return records;
-
+        }
+        // 创建并缓存 FetchRequest 请求（从服务端获取）
         fetcher.sendFetches();
+        // 发送 FetchRequest 请求
         client.poll(timeout, now);
         return fetcher.fetchedRecords();
     }
 
     /**
-     * Commit offsets returned on the last {@link #poll(long) poll()} for all the subscribed list of topics and partitions.
+     * Commit offsets returned on the last {@link #poll(long) poll()} for all the subscribed list of
+     * topics and partitions.
      * <p>
-     * This commits offsets only to Kafka. The offsets committed using this API will be used on the first fetch after
-     * every rebalance and also on startup. As such, if you need to store offsets in anything other than Kafka, this API
-     * should not be used.
+     * This commits offsets only to Kafka. The offsets committed using this API will be used on the
+     * first fetch after every rebalance and also on startup. As such, if you need to store offsets
+     * in anything other than Kafka, this API should not be used.
      * <p>
-     * This is a synchronous commits and will block until either the commit succeeds or an unrecoverable error is
-     * encountered (in which case it is thrown to the caller).
+     * This is a synchronous commits and will block until either the commit succeeds or an
+     * unrecoverable error is encountered (in which case it is thrown to the caller).
      *
-     * @throws org.apache.kafka.clients.consumer.CommitFailedException if the commit failed and cannot be retried.
-     *             This can only occur if you are using automatic group management with {@link #subscribe(Collection)},
-     *             or if there is an active group with the same groupId which is using group management.
-     * @throws org.apache.kafka.common.errors.WakeupException if {@link #wakeup()} is called before or while this
-     *             function is called
-     * @throws org.apache.kafka.common.errors.AuthorizationException if not authorized to the topic or to the
-     *             configured groupId
-     * @throws org.apache.kafka.common.KafkaException for any other unrecoverable errors (e.g. if offset metadata
-     *             is too large or if the committed offset is invalid).
+     * @throws org.apache.kafka.clients.consumer.CommitFailedException if the commit failed and
+     *                                                                 cannot be retried. This can
+     *                                                                 only occur if you are using
+     *                                                                 automatic group management
+     *                                                                 with {@link #subscribe(Collection)},
+     *                                                                 or if there is an active
+     *                                                                 group with the same groupId
+     *                                                                 which is using group
+     *                                                                 management.
+     * @throws org.apache.kafka.common.errors.WakeupException          if {@link #wakeup()} is
+     *                                                                 called before or while this
+     *                                                                 function is called
+     * @throws org.apache.kafka.common.errors.AuthorizationException   if not authorized to the
+     *                                                                 topic or to the configured
+     *                                                                 groupId
+     * @throws org.apache.kafka.common.KafkaException                  for any other unrecoverable
+     *                                                                 errors (e.g. if offset
+     *                                                                 metadata is too large or if
+     *                                                                 the committed offset is
+     *                                                                 invalid).
      */
     @Override
     public void commitSync() {
@@ -1038,24 +1117,35 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     /**
      * Commit the specified offsets for the specified list of topics and partitions.
      * <p>
-     * This commits offsets to Kafka. The offsets committed using this API will be used on the first fetch after every
-     * rebalance and also on startup. As such, if you need to store offsets in anything other than Kafka, this API
-     * should not be used. The committed offset should be the next message your application will consume,
-     * i.e. lastProcessedMessageOffset + 1.
+     * This commits offsets to Kafka. The offsets committed using this API will be used on the first
+     * fetch after every rebalance and also on startup. As such, if you need to store offsets in
+     * anything other than Kafka, this API should not be used. The committed offset should be the
+     * next message your application will consume, i.e. lastProcessedMessageOffset + 1.
      * <p>
-     * This is a synchronous commits and will block until either the commit succeeds or an unrecoverable error is
-     * encountered (in which case it is thrown to the caller).
+     * This is a synchronous commits and will block until either the commit succeeds or an
+     * unrecoverable error is encountered (in which case it is thrown to the caller).
      *
      * @param offsets A map of offsets by partition with associated metadata
-     * @throws org.apache.kafka.clients.consumer.CommitFailedException if the commit failed and cannot be retried.
-     *             This can only occur if you are using automatic group management with {@link #subscribe(Collection)},
-     *             or if there is an active group with the same groupId which is using group management.
-     * @throws org.apache.kafka.common.errors.WakeupException if {@link #wakeup()} is called before or while this
-     *             function is called
-     * @throws org.apache.kafka.common.errors.AuthorizationException if not authorized to the topic or to the
-     *             configured groupId
-     * @throws org.apache.kafka.common.KafkaException for any other unrecoverable errors (e.g. if offset metadata
-     *             is too large or if the committed offset is invalid).
+     * @throws org.apache.kafka.clients.consumer.CommitFailedException if the commit failed and
+     *                                                                 cannot be retried. This can
+     *                                                                 only occur if you are using
+     *                                                                 automatic group management
+     *                                                                 with {@link #subscribe(Collection)},
+     *                                                                 or if there is an active
+     *                                                                 group with the same groupId
+     *                                                                 which is using group
+     *                                                                 management.
+     * @throws org.apache.kafka.common.errors.WakeupException          if {@link #wakeup()} is
+     *                                                                 called before or while this
+     *                                                                 function is called
+     * @throws org.apache.kafka.common.errors.AuthorizationException   if not authorized to the
+     *                                                                 topic or to the configured
+     *                                                                 groupId
+     * @throws org.apache.kafka.common.KafkaException                  for any other unrecoverable
+     *                                                                 errors (e.g. if offset
+     *                                                                 metadata is too large or if
+     *                                                                 the committed offset is
+     *                                                                 invalid).
      */
     @Override
     public void commitSync(final Map<TopicPartition, OffsetAndMetadata> offsets) {
@@ -1068,8 +1158,8 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Commit offsets returned on the last {@link #poll(long) poll()} for all the subscribed list of topics and partition.
-     * Same as {@link #commitAsync(OffsetCommitCallback) commitAsync(null)}
+     * Commit offsets returned on the last {@link #poll(long) poll()} for all the subscribed list of
+     * topics and partition. Same as {@link #commitAsync(OffsetCommitCallback) commitAsync(null)}
      */
     @Override
     public void commitAsync() {
@@ -1077,14 +1167,15 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Commit offsets returned on the last {@link #poll(long) poll()} for the subscribed list of topics and partitions.
+     * Commit offsets returned on the last {@link #poll(long) poll()} for the subscribed list of
+     * topics and partitions.
      * <p>
-     * This commits offsets only to Kafka. The offsets committed using this API will be used on the first fetch after
-     * every rebalance and also on startup. As such, if you need to store offsets in anything other than Kafka, this API
-     * should not be used.
+     * This commits offsets only to Kafka. The offsets committed using this API will be used on the
+     * first fetch after every rebalance and also on startup. As such, if you need to store offsets
+     * in anything other than Kafka, this API should not be used.
      * <p>
-     * This is an asynchronous call and will not block. Any errors encountered are either passed to the callback
-     * (if provided) or discarded.
+     * This is an asynchronous call and will not block. Any errors encountered are either passed to
+     * the callback (if provided) or discarded.
      *
      * @param callback Callback to invoke when the commit completes
      */
@@ -1101,20 +1192,21 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     /**
      * Commit the specified offsets for the specified list of topics and partitions to Kafka.
      * <p>
-     * This commits offsets to Kafka. The offsets committed using this API will be used on the first fetch after every
-     * rebalance and also on startup. As such, if you need to store offsets in anything other than Kafka, this API
-     * should not be used. The committed offset should be the next message your application will consume,
-     * i.e. lastProcessedMessageOffset + 1.
+     * This commits offsets to Kafka. The offsets committed using this API will be used on the first
+     * fetch after every rebalance and also on startup. As such, if you need to store offsets in
+     * anything other than Kafka, this API should not be used. The committed offset should be the
+     * next message your application will consume, i.e. lastProcessedMessageOffset + 1.
      * <p>
-     * This is an asynchronous call and will not block. Any errors encountered are either passed to the callback
-     * (if provided) or discarded.
+     * This is an asynchronous call and will not block. Any errors encountered are either passed to
+     * the callback (if provided) or discarded.
      *
-     * @param offsets A map of offsets by partition with associate metadata. This map will be copied internally, so it
-     *                is safe to mutate the map after returning.
+     * @param offsets  A map of offsets by partition with associate metadata. This map will be
+     *                 copied internally, so it is safe to mutate the map after returning.
      * @param callback Callback to invoke when the commit completes
      */
     @Override
-    public void commitAsync(final Map<TopicPartition, OffsetAndMetadata> offsets, OffsetCommitCallback callback) {
+    public void commitAsync(final Map<TopicPartition, OffsetAndMetadata> offsets,
+        OffsetCommitCallback callback) {
         acquire();
         try {
             log.debug("Committing offsets: {} ", offsets);
@@ -1125,9 +1217,10 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Overrides the fetch offsets that the consumer will use on the next {@link #poll(long) poll(timeout)}. If this API
-     * is invoked for the same partition more than once, the latest offset will be used on the next poll(). Note that
-     * you may lose data if this API is arbitrarily used in the middle of consumption, to reset the fetch offsets
+     * Overrides the fetch offsets that the consumer will use on the next {@link #poll(long)
+     * poll(timeout)}. If this API is invoked for the same partition more than once, the latest
+     * offset will be used on the next poll(). Note that you may lose data if this API is
+     * arbitrarily used in the middle of consumption, to reset the fetch offsets
      */
     @Override
     public void seek(TopicPartition partition, long offset) {
@@ -1144,14 +1237,16 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Seek to the first offset for each of the given partitions. This function evaluates lazily, seeking to the
-     * first offset in all partitions only when {@link #poll(long)} or {@link #position(TopicPartition)} are called.
-     * If no partition is provided, seek to the first offset for all of the currently assigned partitions.
+     * Seek to the first offset for each of the given partitions. This function evaluates lazily,
+     * seeking to the first offset in all partitions only when {@link #poll(long)} or {@link
+     * #position(TopicPartition)} are called. If no partition is provided, seek to the first offset
+     * for all of the currently assigned partitions.
      */
     public void seekToBeginning(Collection<TopicPartition> partitions) {
         acquire();
         try {
-            Collection<TopicPartition> parts = partitions.size() == 0 ? this.subscriptions.assignedPartitions() : partitions;
+            Collection<TopicPartition> parts =
+                partitions.size() == 0 ? this.subscriptions.assignedPartitions() : partitions;
             for (TopicPartition tp : parts) {
                 log.debug("Seeking to beginning of partition {}", tp);
                 subscriptions.needOffsetReset(tp, OffsetResetStrategy.EARLIEST);
@@ -1162,14 +1257,16 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Seek to the last offset for each of the given partitions. This function evaluates lazily, seeking to the
-     * final offset in all partitions only when {@link #poll(long)} or {@link #position(TopicPartition)} are called.
-     * If no partition is provided, seek to the final offset for all of the currently assigned partitions.
+     * Seek to the last offset for each of the given partitions. This function evaluates lazily,
+     * seeking to the final offset in all partitions only when {@link #poll(long)} or {@link
+     * #position(TopicPartition)} are called. If no partition is provided, seek to the final offset
+     * for all of the currently assigned partitions.
      */
     public void seekToEnd(Collection<TopicPartition> partitions) {
         acquire();
         try {
-            Collection<TopicPartition> parts = partitions.size() == 0 ? this.subscriptions.assignedPartitions() : partitions;
+            Collection<TopicPartition> parts =
+                partitions.size() == 0 ? this.subscriptions.assignedPartitions() : partitions;
             for (TopicPartition tp : parts) {
                 log.debug("Seeking to end of partition {}", tp);
                 subscriptions.needOffsetReset(tp, OffsetResetStrategy.LATEST);
@@ -1180,23 +1277,29 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Get the offset of the <i>next record</i> that will be fetched (if a record with that offset exists).
+     * Get the offset of the <i>next record</i> that will be fetched (if a record with that offset
+     * exists).
      *
      * @param partition The partition to get the position for
      * @return The offset
-     * @throws org.apache.kafka.clients.consumer.InvalidOffsetException if no offset is currently defined for
-     *             the partition
-     * @throws org.apache.kafka.common.errors.WakeupException if {@link #wakeup()} is called before or while this
-     *             function is called
-     * @throws org.apache.kafka.common.errors.AuthorizationException if not authorized to the topic or to the
-     *             configured groupId
-     * @throws org.apache.kafka.common.KafkaException for any other unrecoverable errors
+     * @throws org.apache.kafka.clients.consumer.InvalidOffsetException if no offset is currently
+     *                                                                  defined for the partition
+     * @throws org.apache.kafka.common.errors.WakeupException           if {@link #wakeup()} is
+     *                                                                  called before or while this
+     *                                                                  function is called
+     * @throws org.apache.kafka.common.errors.AuthorizationException    if not authorized to the
+     *                                                                  topic or to the configured
+     *                                                                  groupId
+     * @throws org.apache.kafka.common.KafkaException                   for any other unrecoverable
+     *                                                                  errors
      */
     public long position(TopicPartition partition) {
         acquire();
         try {
-            if (!this.subscriptions.isAssigned(partition))
-                throw new IllegalArgumentException("You can only check the position for partitions assigned to this consumer.");
+            if (!this.subscriptions.isAssigned(partition)) {
+                throw new IllegalArgumentException(
+                    "You can only check the position for partitions assigned to this consumer.");
+            }
             Long offset = this.subscriptions.position(partition);
             if (offset == null) {
                 updateFetchPositions(Collections.singleton(partition));
@@ -1209,19 +1312,22 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Get the last committed offset for the given partition (whether the commit happened by this process or
-     * another). This offset will be used as the position for the consumer in the event of a failure.
+     * Get the last committed offset for the given partition (whether the commit happened by this
+     * process or another). This offset will be used as the position for the consumer in the event
+     * of a failure.
      * <p>
-     * This call may block to do a remote call if the partition in question isn't assigned to this consumer or if the
-     * consumer hasn't yet initialized its cache of committed offsets.
+     * This call may block to do a remote call if the partition in question isn't assigned to this
+     * consumer or if the consumer hasn't yet initialized its cache of committed offsets.
      *
      * @param partition The partition to check
      * @return The last committed offset and metadata or null if there was no prior commit
-     * @throws org.apache.kafka.common.errors.WakeupException if {@link #wakeup()} is called before or while this
-     *             function is called
-     * @throws org.apache.kafka.common.errors.AuthorizationException if not authorized to the topic or to the
-     *             configured groupId
-     * @throws org.apache.kafka.common.KafkaException for any other unrecoverable errors
+     * @throws org.apache.kafka.common.errors.WakeupException        if {@link #wakeup()} is called
+     *                                                               before or while this function
+     *                                                               is called
+     * @throws org.apache.kafka.common.errors.AuthorizationException if not authorized to the topic
+     *                                                               or to the configured groupId
+     * @throws org.apache.kafka.common.KafkaException                for any other unrecoverable
+     *                                                               errors
      */
     @Override
     public OffsetAndMetadata committed(TopicPartition partition) {
@@ -1235,7 +1341,8 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
                     committed = this.subscriptions.committed(partition);
                 }
             } else {
-                Map<TopicPartition, OffsetAndMetadata> offsets = coordinator.fetchCommittedOffsets(Collections.singleton(partition));
+                Map<TopicPartition, OffsetAndMetadata> offsets = coordinator
+                    .fetchCommittedOffsets(Collections.singleton(partition));
                 committed = offsets.get(partition);
             }
 
@@ -1254,17 +1361,21 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Get metadata about the partitions for a given topic. This method will issue a remote call to the server if it
-     * does not already have any metadata about the given topic.
+     * Get metadata about the partitions for a given topic. This method will issue a remote call to
+     * the server if it does not already have any metadata about the given topic.
      *
      * @param topic The topic to get partition metadata for
      * @return The list of partitions
-     * @throws org.apache.kafka.common.errors.WakeupException if {@link #wakeup()} is called before or while this
-     *             function is called
-     * @throws org.apache.kafka.common.errors.AuthorizationException if not authorized to the specified topic
-     * @throws org.apache.kafka.common.errors.TimeoutException if the topic metadata could not be fetched before
-     *             expiration of the configured request timeout
-     * @throws org.apache.kafka.common.KafkaException for any other unrecoverable errors
+     * @throws org.apache.kafka.common.errors.WakeupException        if {@link #wakeup()} is called
+     *                                                               before or while this function
+     *                                                               is called
+     * @throws org.apache.kafka.common.errors.AuthorizationException if not authorized to the
+     *                                                               specified topic
+     * @throws org.apache.kafka.common.errors.TimeoutException       if the topic metadata could not
+     *                                                               be fetched before expiration of
+     *                                                               the configured request timeout
+     * @throws org.apache.kafka.common.KafkaException                for any other unrecoverable
+     *                                                               errors
      */
     @Override
     public List<PartitionInfo> partitionsFor(String topic) {
@@ -1272,10 +1383,13 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
         try {
             Cluster cluster = this.metadata.fetch();
             List<PartitionInfo> parts = cluster.partitionsForTopic(topic);
-            if (parts != null)
+            if (parts != null) {
                 return parts;
+            }
 
-            Map<String, List<PartitionInfo>> topicMetadata = fetcher.getTopicMetadata(new MetadataRequest(Collections.singletonList(topic)), requestTimeoutMs);
+            Map<String, List<PartitionInfo>> topicMetadata = fetcher
+                .getTopicMetadata(new MetadataRequest(Collections.singletonList(topic)),
+                    requestTimeoutMs);
             return topicMetadata.get(topic);
         } finally {
             release();
@@ -1283,15 +1397,16 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Get metadata about partitions for all topics that the user is authorized to view. This method will issue a
-     * remote call to the server.
-
+     * Get metadata about partitions for all topics that the user is authorized to view. This method
+     * will issue a remote call to the server.
+     *
      * @return The map of topics and its partitions
-     * @throws org.apache.kafka.common.errors.WakeupException if {@link #wakeup()} is called before or while this
-     *             function is called
-     * @throws org.apache.kafka.common.errors.TimeoutException if the topic metadata could not be fetched before
-     *             expiration of the configured request timeout
-     * @throws org.apache.kafka.common.KafkaException for any other unrecoverable errors
+     * @throws org.apache.kafka.common.errors.WakeupException  if {@link #wakeup()} is called before
+     *                                                         or while this function is called
+     * @throws org.apache.kafka.common.errors.TimeoutException if the topic metadata could not be
+     *                                                         fetched before expiration of the
+     *                                                         configured request timeout
+     * @throws org.apache.kafka.common.KafkaException          for any other unrecoverable errors
      */
     @Override
     public Map<String, List<PartitionInfo>> listTopics() {
@@ -1304,17 +1419,18 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Suspend fetching from the requested partitions. Future calls to {@link #poll(long)} will not return
-     * any records from these partitions until they have been resumed using {@link #resume(Collection)}.
-     * Note that this method does not affect partition subscription. In particular, it does not cause a group
-     * rebalance when automatic assignment is used.
+     * Suspend fetching from the requested partitions. Future calls to {@link #poll(long)} will not
+     * return any records from these partitions until they have been resumed using {@link
+     * #resume(Collection)}. Note that this method does not affect partition subscription. In
+     * particular, it does not cause a group rebalance when automatic assignment is used.
+     *
      * @param partitions The partitions which should be paused
      */
     @Override
     public void pause(Collection<TopicPartition> partitions) {
         acquire();
         try {
-            for (TopicPartition partition: partitions) {
+            for (TopicPartition partition : partitions) {
                 log.debug("Pausing partition {}", partition);
                 subscriptions.pause(partition);
             }
@@ -1324,16 +1440,17 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Resume specified partitions which have been paused with {@link #pause(Collection)}. New calls to
-     * {@link #poll(long)} will return records from these partitions if there are any to be fetched.
-     * If the partitions were not previously paused, this method is a no-op.
+     * Resume specified partitions which have been paused with {@link #pause(Collection)}. New calls
+     * to {@link #poll(long)} will return records from these partitions if there are any to be
+     * fetched. If the partitions were not previously paused, this method is a no-op.
+     *
      * @param partitions The partitions which should be resumed
      */
     @Override
     public void resume(Collection<TopicPartition> partitions) {
         acquire();
         try {
-            for (TopicPartition partition: partitions) {
+            for (TopicPartition partition : partitions) {
                 log.debug("Resuming partition {}", partition);
                 subscriptions.resume(partition);
             }
@@ -1343,7 +1460,8 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Get the set of partitions that were previously paused by a call to {@link #pause(Collection)}.
+     * Get the set of partitions that were previously paused by a call to {@link
+     * #pause(Collection)}.
      *
      * @return The set of paused partitions
      */
@@ -1358,14 +1476,17 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Close the consumer, waiting indefinitely for any needed cleanup. If auto-commit is enabled, this
-     * will commit the current offsets. Note that {@link #wakeup()} cannot be use to interrupt close.
+     * Close the consumer, waiting indefinitely for any needed cleanup. If auto-commit is enabled,
+     * this will commit the current offsets. Note that {@link #wakeup()} cannot be use to interrupt
+     * close.
      */
     @Override
     public void close() {
         acquire();
         try {
-            if (closed) return;
+            if (closed) {
+                return;
+            }
             close(false);
         } finally {
             release();
@@ -1373,8 +1494,9 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Wakeup the consumer. This method is thread-safe and is useful in particular to abort a long poll.
-     * The thread which is blocking in an operation will throw {@link org.apache.kafka.common.errors.WakeupException}.
+     * Wakeup the consumer. This method is thread-safe and is useful in particular to abort a long
+     * poll. The thread which is blocking in an operation will throw {@link
+     * org.apache.kafka.common.errors.WakeupException}.
      */
     @Override
     public void wakeup() {
@@ -1399,12 +1521,12 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     /**
-     * Set the fetch position to the committed position (if there is one)
-     * or reset it using the offset reset policy the user has configured.
+     * Set the fetch position to the committed position (if there is one) or reset it using the
+     * offset reset policy the user has configured.
      *
      * @param partitions The partitions that needs updating fetch positions
-     * @throws NoOffsetForPartitionException If no offset is stored for a given partition and no offset reset policy is
-     *             defined
+     * @throws NoOffsetForPartitionException If no offset is stored for a given partition and no
+     *                                       offset reset policy is defined
      */
     private void updateFetchPositions(Set<TopicPartition> partitions) {
         // lookup any positions for partitions which are awaiting reset (which may be the
@@ -1429,22 +1551,27 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
      * Check that the consumer hasn't been closed.
      */
     private void ensureNotClosed() {
-        if (this.closed)
+        if (this.closed) {
             throw new IllegalStateException("This consumer has already been closed.");
+        }
     }
 
     /**
-     * Acquire the light lock protecting this consumer from multi-threaded access. Instead of blocking
-     * when the lock is not available, however, we just throw an exception (since multi-threaded usage is not
-     * supported).
-     * @throws IllegalStateException if the consumer has been closed
+     * 保存多线程同时消费引发的线程安全问题 Acquire the light lock protecting this consumer from multi-threaded
+     * access. Instead of blocking when the lock is not available, however, we just throw an
+     * exception (since multi-threaded usage is not supported).
+     *
+     * @throws IllegalStateException           if the consumer has been closed
      * @throws ConcurrentModificationException if another thread already has the lock
      */
     private void acquire() {
         ensureNotClosed();
         long threadId = Thread.currentThread().getId();
-        if (threadId != currentThread.get() && !currentThread.compareAndSet(NO_CURRENT_THREAD, threadId))
-            throw new ConcurrentModificationException("KafkaConsumer is not safe for multi-threaded access");
+        if (threadId != currentThread.get() && !currentThread
+            .compareAndSet(NO_CURRENT_THREAD, threadId)) {
+            throw new ConcurrentModificationException(
+                "KafkaConsumer is not safe for multi-threaded access");
+        }
         refcount.incrementAndGet();
     }
 
@@ -1452,7 +1579,8 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
      * Release the light lock protecting the consumer from multi-threaded access.
      */
     private void release() {
-        if (refcount.decrementAndGet() == 0)
+        if (refcount.decrementAndGet() == 0) {
             currentThread.set(NO_CURRENT_THREAD);
+        }
     }
 }
