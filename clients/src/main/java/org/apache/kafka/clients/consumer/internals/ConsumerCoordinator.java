@@ -228,26 +228,31 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
                                   ByteBuffer assignmentBuffer) {
         // if we were the assignor, then we need to make sure that there have been no metadata updates
         // since the rebalance begin. Otherwise, we won't rebalance again until the next metadata change
+        // leader 需要比较快照，follower则不用
         if (assignmentSnapshot != null && !assignmentSnapshot.equals(metadataSnapshot)) {
             subscriptions.needReassignment();
             return;
         }
 
+        // 查找使用的分配策略
         PartitionAssignor assignor = lookupAssignor(assignmentStrategy);
         if (assignor == null)
             throw new IllegalStateException("Coordinator selected invalid assignment protocol: " + assignmentStrategy);
-
+        // 反序列化，更新assignment
         Assignment assignment = ConsumerProtocol.deserializeAssignment(assignmentBuffer);
 
         // set the flag to refresh last committed offsets
+        // 设置标志，刷新最新提交的offset
         subscriptions.needRefreshCommits();
 
         // update partition assignment
+        // 填充assignment集合
         subscriptions.assignFromSubscribed(assignment.partitions());
 
         // give the assignor a chance to update internal state based on the received assignment
+        // 回调函数
         assignor.onAssignment(assignment);
-
+        // 开启 AutoCommitTask 定时任务
         // reschedule the auto commit starting from now
         if (autoCommitEnabled)
             autoCommitTask.reschedule();
@@ -277,6 +282,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
 
         Set<String> allSubscribedTopics = new HashSet<>();
         Map<String, Subscription> subscriptions = new HashMap<>();
+        // 反序列化操作及汇总操作
         for (Map.Entry<String, ByteBuffer> subscriptionEntry : allSubscriptions.entrySet()) {
             Subscription subscription = ConsumerProtocol.deserializeSubscription(subscriptionEntry.getValue());
             subscriptions.put(subscriptionEntry.getKey(), subscription);
@@ -285,22 +291,26 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
 
         // the leader will begin watching for changes to any of the topics the group is interested in,
         // which ensures that all metadata changes will eventually be seen
+        // leader 要关注Consumer Group 中全部消费者订阅的Topic
         this.subscriptions.groupSubscribe(allSubscribedTopics);
         metadata.setTopics(this.subscriptions.groupSubscription());
 
         // update metadata (if needed) and keep track of the metadata used for assignment so that
         // we can check after rebalance completion whether anything has changed
+        // 更新Metadata
         client.ensureFreshMetadata();
+        // 记录快照
         assignmentSnapshot = metadataSnapshot;
 
         log.debug("Performing assignment for group {} using strategy {} with subscriptions {}",
                 groupId, assignor.name(), subscriptions);
-
+        // 进行日志分配
         Map<String, Assignment> assignment = assignor.assign(metadata.fetch(), subscriptions);
 
         log.debug("Finished assignment for group {}: {}", groupId, assignment);
 
         Map<String, ByteBuffer> groupAssignment = new HashMap<>();
+        // 讲分区分配结果序列化，并保存岛groupAssignment中
         for (Map.Entry<String, Assignment> assignmentEntry : assignment.entrySet()) {
             ByteBuffer buffer = ConsumerProtocol.serializeAssignment(assignmentEntry.getValue());
             groupAssignment.put(assignmentEntry.getKey(), buffer);
@@ -440,6 +450,8 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
 
     private void doCommitOffsetsAsync(final Map<TopicPartition, OffsetAndMetadata> offsets, final OffsetCommitCallback callback) {
         this.subscriptions.needRefreshCommits();
+        // 创建并缓存OffsetCommitRequest 请求，逻辑与之前发送JoinGroupRequest 和SyncGroupRequest类似
+        // 唯一的区别就是使用OffsetCommitResponseHandler处理OffSetCommitResponse
         RequestFuture<Void> future = sendOffsetCommitRequest(offsets);
         final OffsetCommitCallback cb = callback == null ? defaultOffsetCommitCallback : callback;
         future.addListener(new RequestFutureListener<Void>() {
@@ -620,6 +632,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
                     log.debug("Group {} committed offset {} for partition {}", groupId, offset, tp);
                     if (subscriptions.isAssigned(tp))
                         // update the local cache only if the partition is still assigned
+                        // 更新SubscriptionState 中对应TopicPartitionState的committed字段
                         subscriptions.committed(tp, offsetAndMetadata);
                 } else if (error == Errors.GROUP_AUTHORIZATION_FAILED) {
                     log.error("Not authorized to commit offsets for group {}", groupId);

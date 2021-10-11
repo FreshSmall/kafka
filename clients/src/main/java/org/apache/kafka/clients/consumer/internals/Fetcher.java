@@ -73,16 +73,24 @@ public class Fetcher<K, V> {
 
     private static final Logger log = LoggerFactory.getLogger(Fetcher.class);
 
+    // 负责网络通信
     private final ConsumerNetworkClient client;
     private final Time time;
+    // 在服务端受到FetchRequest 之后并不是立即响应，而是当可返回的消息数据积累岛至少minBytes个字节时才进行响应。这样每个FetchResponse中就包含多条消息，提高网络的有效负载
     private final int minBytes;
+    // 等待FetchResponse 的最长时间，服务端根据此时间决定何时进行响应
     private final int maxWaitMs;
+    // 每次fetch操作的最大字节数
     private final int fetchSize;
+
     private final long retryBackoffMs;
+    // 每次获取Record的最大数量
     private final int maxPollRecords;
     private final boolean checkCrcs;
+    // kafka 集群的元数据
     private final Metadata metadata;
     private final FetchManagerMetrics sensors;
+    // 记录每个TopicPartition的消费情况
     private final SubscriptionState subscriptions;
     private final List<CompletedFetch> completedFetches;
     private final Deserializer<K> keyDeserializer;
@@ -493,12 +501,16 @@ public class Fetcher<K, V> {
      */
     private Map<Node, FetchRequest> createFetchRequests() {
         // create the fetch info
+        // 获取kafka集群的元数据
         Cluster cluster = metadata.fetch();
         Map<Node, Map<TopicPartition, FetchRequest.PartitionData>> fetchable = new HashMap<>();
         for (TopicPartition partition : fetchablePartitions()) {
+            // 查找分区leader 副本所在的Node
             Node node = cluster.leaderFor(partition);
             if (node == null) {
+                // 找不到leader副本则准备更新Metadata
                 metadata.requestUpdate();
+            // 是否还有pending请求
             } else if (this.client.pendingRequestCount(node) == 0) {
                 // if there is a leader and no in-flight requests, issue a new fetch
                 Map<TopicPartition, FetchRequest.PartitionData> fetch = fetchable.get(node);
@@ -508,12 +520,14 @@ public class Fetcher<K, V> {
                 }
 
                 long position = this.subscriptions.position(partition);
+                // 记录每个分区的对应的position，即要fetch消息的offset
                 fetch.put(partition, new FetchRequest.PartitionData(position, this.fetchSize));
                 log.trace("Added fetch request for partition {} at offset {}", partition, position);
             }
         }
 
         // create the fetches
+        // 对上面的fetchable 集合进行转换，讲发往同一个Node节点的所有TopicPartition 的position信息封装成一个FetchRequest对象
         Map<Node, FetchRequest> requests = new HashMap<>();
         for (Map.Entry<Node, Map<TopicPartition, FetchRequest.PartitionData>> entry : fetchable.entrySet()) {
             Node node = entry.getKey();

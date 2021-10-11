@@ -195,6 +195,7 @@ public abstract class AbstractCoordinator implements Closeable {
      * 发送GroupCoordinatorRequest 请求入口
      */
     public void ensureCoordinatorReady() {
+        // 检查GroupCoordinator的状态
         while (coordinatorUnknown()) {
             RequestFuture<Void> future = lookupCoordinator();
             // 将GroupCoordinatorRequest 请求发送出去
@@ -527,14 +528,18 @@ public abstract class AbstractCoordinator implements Closeable {
         @Override
         public void handle(SyncGroupResponse syncResponse,
             RequestFuture<ByteBuffer> future) {
+
             Errors error = Errors.forCode(syncResponse.errorCode());
             if (error == Errors.NONE) {
                 log.info("Successfully joined group {} with generation {}", groupId, generation);
                 sensors.syncLatency.record(response.requestLatencyMs());
+                // 调用RequestFuture.complete()方法传播分区分配结果
                 future.complete(syncResponse.memberAssignment());
             } else {
+                // 将rejoinNeeded 设置为true
                 AbstractCoordinator.this.rejoinNeeded = true;
                 if (error == Errors.GROUP_AUTHORIZATION_FAILED) {
+                    // 调用RequestFuture.raise()方法传播异常
                     future.raise(new GroupAuthorizationException(groupId));
                 } else if (error == Errors.REBALANCE_IN_PROGRESS) {
                     log.debug("SyncGroup for group {} failed due to coordinator rebalance",
