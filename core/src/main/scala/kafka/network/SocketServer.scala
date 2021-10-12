@@ -95,6 +95,7 @@ class SocketServer(val config: KafkaConfig, val metrics: Metrics, val time: Time
         val acceptor = new Acceptor(endpoint, sendBufferSize, recvBufferSize, brokerId,
           processors.slice(processorBeginIndex, processorEndIndex), connectionQuotas)
         acceptors.put(endpoint, acceptor)
+        // 启动acceptor 线程
         Utils.newThread("kafka-socket-acceptor-%s-%d".format(protocol.toString, endpoint.port), acceptor, false).start()
         acceptor.awaitStartup()
 
@@ -241,6 +242,7 @@ private[kafka] class Acceptor(val endPoint: EndPoint,
   val serverChannel = openServerSocket(endPoint.host, endPoint.port)
 
   this.synchronized {
+    // 启动所有的 processor 线程
     processors.foreach { processor =>
       Utils.newThread("kafka-network-thread-%d-%s-%d".format(brokerId, endPoint.protocolType.toString, processor.id), processor, false).start()
     }
@@ -264,6 +266,7 @@ private[kafka] class Acceptor(val endPoint: EndPoint,
               try {
                 val key = iter.next
                 iter.remove()
+                // 连接准备好
                 if (key.isAcceptable)
                   accept(key, processors(currentProcessor))
                 else
@@ -402,6 +405,7 @@ private[kafka] class Processor(val id: Int,
     ChannelBuilders.create(protocol, Mode.SERVER, LoginType.SERVER, channelConfigs, null, true))
 
   override def run() {
+
     startupComplete()
     while (isRunning) {
       try {
@@ -497,6 +501,7 @@ private[kafka] class Processor(val id: Int,
     }
   }
 
+  // 处理响应已经发送完成的请求
   private def processCompletedSends() {
     selector.completedSends.asScala.foreach { send =>
       val resp = inflightResponses.remove(send.destination).getOrElse {
@@ -507,6 +512,7 @@ private[kafka] class Processor(val id: Int,
     }
   }
 
+  // 处理连接失败的请求
   private def processDisconnected() {
     selector.disconnected.asScala.foreach { connectionId =>
       val remoteHost = ConnectionId.fromString(connectionId).getOrElse {
@@ -539,6 +545,7 @@ private[kafka] class Processor(val id: Int,
         val remoteHost = channel.socket().getInetAddress.getHostAddress
         val remotePort = channel.socket().getPort
         val connectionId = ConnectionId(localHost, localPort, remoteHost, remotePort).toString
+        // 注册通道
         selector.register(connectionId, channel)
       } catch {
         // We explicitly catch all non fatal exceptions and close the socket to avoid a socket leak. The other
