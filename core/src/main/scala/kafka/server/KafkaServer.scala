@@ -171,9 +171,10 @@ class KafkaServer(val config: KafkaConfig, time: Time = SystemTime, threadNamePr
       if (canStartup) {
         metrics = new Metrics(metricConfig, reporters, kafkaMetricsTime, true)
 
+        // 标记broker 的状态
         brokerState.newState(Starting)
 
-        /* start scheduler */
+        /* start scheduler 定时器*/
         kafkaScheduler.startup()
 
         /* setup zookeeper */
@@ -542,6 +543,7 @@ class KafkaServer(val config: KafkaConfig, time: Time = SystemTime, threadNamePr
       val canShutdown = isShuttingDown.compareAndSet(false, true)
       if (canShutdown && shutdownLatch.getCount > 0) {
         CoreUtils.swallow(controlledShutdown())
+        // 标记broker的状态为shutdown
         brokerState.newState(BrokerShuttingDown)
         if (socketServer != null)
           CoreUtils.swallow(socketServer.shutdown())
