@@ -1,18 +1,16 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Licensed to the Apache Software Foundation (ASF) under one or more contributor license
+ * agreements.  See the NOTICE file distributed with this work for additional information regarding
+ * copyright ownership. The ASF licenses this file to You under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.  You may obtain a
+ * copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software distributed under the License
+ * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+ * or implied. See the License for the specific language governing permissions and limitations under
+ * the License.
  */
 
 package org.apache.kafka.common.network;
@@ -29,6 +27,7 @@ import java.security.Principal;
 import org.apache.kafka.common.utils.Utils;
 
 public class KafkaChannel {
+
     private final String id;
     private final TransportLayer transportLayer;
     private final Authenticator authenticator;
@@ -36,7 +35,8 @@ public class KafkaChannel {
     private NetworkReceive receive;
     private Send send;
 
-    public KafkaChannel(String id, TransportLayer transportLayer, Authenticator authenticator, int maxReceiveSize) throws IOException {
+    public KafkaChannel(String id, TransportLayer transportLayer, Authenticator authenticator,
+        int maxReceiveSize) throws IOException {
         this.id = id;
         this.transportLayer = transportLayer;
         this.authenticator = authenticator;
@@ -58,10 +58,12 @@ public class KafkaChannel {
      * Does handshake of transportLayer and authentication using configured authenticator
      */
     public void prepare() throws IOException {
-        if (!transportLayer.ready())
+        if (!transportLayer.ready()) {
             transportLayer.handshake();
-        if (transportLayer.ready() && !authenticator.complete())
+        }
+        if (transportLayer.ready() && !authenticator.complete()) {
             authenticator.authenticate();
+        }
     }
 
     public void disconnect() {
@@ -86,6 +88,7 @@ public class KafkaChannel {
     }
 
     public void unmute() {
+        // 通道注册只读事件
         transportLayer.addInterestOps(SelectionKey.OP_READ);
     }
 
@@ -102,10 +105,11 @@ public class KafkaChannel {
     }
 
     /**
-     * Returns the address to which this channel's socket is connected or `null` if the socket has never been connected.
-     *
-     * If the socket was connected prior to being closed, then this method will continue to return the
-     * connected address after the socket is closed.
+     * Returns the address to which this channel's socket is connected or `null` if the socket has
+     * never been connected.
+     * <p>
+     * If the socket was connected prior to being closed, then this method will continue to return
+     * the connected address after the socket is closed.
      */
     public InetAddress socketAddress() {
         return transportLayer.socketChannel().socket().getInetAddress();
@@ -113,14 +117,17 @@ public class KafkaChannel {
 
     public String socketDescription() {
         Socket socket = transportLayer.socketChannel().socket();
-        if (socket.getInetAddress() == null)
+        if (socket.getInetAddress() == null) {
             return socket.getLocalAddress().toString();
+        }
         return socket.getInetAddress().toString();
     }
 
     public void setSend(Send send) {
-        if (this.send != null)
-            throw new IllegalStateException("Attempt to begin a send operation with prior send operation still in progress.");
+        if (this.send != null) {
+            throw new IllegalStateException(
+                "Attempt to begin a send operation with prior send operation still in progress.");
+        }
         this.send = send;
         this.transportLayer.addInterestOps(SelectionKey.OP_WRITE);
     }
@@ -156,8 +163,9 @@ public class KafkaChannel {
 
     private boolean send(Send send) throws IOException {
         send.writeTo(transportLayer);
-        if (send.completed())
+        if (send.completed()) {
             transportLayer.removeInterestOps(SelectionKey.OP_WRITE);
+        }
 
         return send.completed();
     }

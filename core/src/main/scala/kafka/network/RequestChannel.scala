@@ -176,9 +176,13 @@ object RequestChannel extends Logging {
   case object CloseConnectionAction extends ResponseAction
 }
 
+// 定义了Prodessor 和 Handler 之间交换数据的通道
 class RequestChannel(val numProcessors: Int, val queueSize: Int) extends KafkaMetricsGroup {
+  // 响应监听器列表，当 Handler 往响应队列写回响应数据时唤醒对应的 Processor 线程进行处理
   private var responseListeners: List[(Int) => Unit] = Nil
+  // 请求队列，所有的 Processor 共用一个
   private val requestQueue = new ArrayBlockingQueue[RequestChannel.Request](queueSize)
+  // 响应队列，每个 Processor 对应一个响应队列
   private val responseQueues = new Array[BlockingQueue[RequestChannel.Response]](numProcessors)
   for(i <- 0 until numProcessors)
     responseQueues(i) = new LinkedBlockingQueue[RequestChannel.Response]()
