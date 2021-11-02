@@ -271,7 +271,7 @@ private[kafka] class Acceptor(val endPoint: EndPoint,
               try {
                 val key = iter.next
                 iter.remove()
-                // 连接准备好
+                // 当有客户端连接进来
                 if (key.isAcceptable)
                   accept(key, processors(currentProcessor))
                 else
@@ -425,11 +425,15 @@ private[kafka] class Processor(val id: Int,
         // 配置连接监听只读事件
         configureNewConnections()
         // register any new responses for writing
+        // 获取连接响应事件的请求
         processNewResponses()
         // 发送缓存的响应对象给客户端
         poll()
+        // 处理
         processCompletedReceives()
+        // 处理响应已经发送完成的请求
         processCompletedSends()
+        // 处理断掉的连接
         processDisconnected()
       } catch {
         // We catch all the throwables here to prevent the processor thread from exiting. We do this because
@@ -498,6 +502,7 @@ private[kafka] class Processor(val id: Int,
     }
   }
 
+  // 处理已经接收到连接的请求
   private def processCompletedReceives() {
     selector.completedReceives.asScala.foreach { receive =>
       try {
@@ -551,6 +556,7 @@ private[kafka] class Processor(val id: Int,
    * Register any new connections that have been queued up
    */
   private def configureNewConnections() {
+    // 当前建立的连接注册 op_read 事件
     while (!newConnections.isEmpty) {
       val channel = newConnections.poll()
       try {
@@ -560,7 +566,7 @@ private[kafka] class Processor(val id: Int,
         val remoteHost = channel.socket().getInetAddress.getHostAddress
         val remotePort = channel.socket().getPort
         val connectionId = ConnectionId(localHost, localPort, remoteHost, remotePort).toString
-        // 注册通道
+        // 注册 read 事件
         selector.register(connectionId, channel)
       } catch {
         // We explicitly catch all non fatal exceptions and close the socket to avoid a socket leak. The other
